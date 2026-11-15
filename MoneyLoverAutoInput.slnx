@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MoneyLoverAutoInput.App/MoneyLoverAutoInput.App.csproj" />
+    <Project Path="src/MoneyLoverAutoInput.Core/MoneyLoverAutoInput.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MoneyLoverAutoInput.Tests/MoneyLoverAutoInput.Tests.csproj" />
+  </Folder>
+</Solution>

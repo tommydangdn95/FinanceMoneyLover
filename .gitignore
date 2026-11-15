@@ -1,0 +1,33 @@
+# ---------- Build / IDE ----------
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.rsuser
+TestResults/
+publish/
+artifacts/
+*.log
+
+# ---------- Dữ liệu tài chính cá nhân — KHÔNG BAO GIỜ commit ----------
+# Chặn mọi file Excel; chỉ chừa file mẫu đã ẩn danh trong samples/.
+*.xlsx
+*.xls
+*.csv
+~$*.xlsx
+!samples/sao_ke_mau.xlsx
+
+# Runtime (bình thường nằm ở %LOCALAPPDATA%\MoneyLoverAutoInput, phòng khi copy ra repo)
+state.json
+state.json.tmp
+logs/
+screenshots/
+appsettings.local.json
+
+# Dump UI từ điện thoại (có thể chứa số dư, tên ví, giao dịch trên màn hình)
+ui.xml
+*.uix
+dumps/

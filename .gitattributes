@@ -1,0 +1,14 @@
+# Chuẩn hóa xuống dòng trong repo; Windows checkout ra CRLF.
+* text=auto
+
+*.cs      text diff=csharp
+*.xaml    text
+*.csproj  text
+*.slnx    text
+*.json    text
+*.md      text
+*.ps1     text eol=crlf
+
+*.xlsx    binary
+*.png     binary
+*.ico     binary

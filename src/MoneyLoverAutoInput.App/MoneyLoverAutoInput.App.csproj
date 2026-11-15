@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MoneyLoverAutoInput.App</RootNamespace>
+    <AssemblyName>MoneyLoverAutoInput</AssemblyName>
+    <Product>Money Lover Auto Input</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyLoverAutoInput.Core\MoneyLoverAutoInput.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Nhúng vào exe để bản single-file vẫn tạo được config người dùng ở lần chạy đầu. -->
+    <EmbeddedResource Include="appsettings.default.json" LogicalName="appsettings.default.json" />
+  </ItemGroup>
+
+</Project>
