@@ -58,7 +58,7 @@ App **không** đóng gói sẵn các thành phần này. Màn hình Kiểm tra 
 **Không cần** project Android hoặc Android Studio. Lần chạy đầu, Appium tự cài app hỗ trợ (Appium Settings, UiAutomator2 Server) lên điện thoại.
 
 ### 3.3 Ghi chú thiết bị
-- Money Lover phải để **ngôn ngữ tiếng Việt**, vì một số selector dùng text ("Lưu", "Chọn nhóm"...).
+- Money Lover hiện để **giao diện tiếng Anh** ("Save", "Select category", "Write note"...). Selector theo text, tên nhóm và tên ví trong config đều theo ngôn ngữ này. **Đổi ngôn ngữ app thì phải đổi config theo.**
 - Xiaomi/Redmi/POCO: phải bật thêm **"USB debugging (Security settings)"**, nếu không thì click/gõ sẽ không có tác dụng.
 - Khi chạy: mở khóa màn hình, tắt tự khóa hoặc bật "Stay awake".
 - Wi-Fi debugging (Android 11+): `adb pair IP:pairPort` (một lần), sau đó `adb connect IP:port`. Cổng thay đổi mỗi lần bật lại.
@@ -146,7 +146,7 @@ MoneyLoverAutoInput/
 │     │  ├─ EnvironmentPage.xaml
 │     │  ├─ PreviewPage.xaml
 │     │  ├─ RunPage.xaml
-│     │  ├─ RulesPage.xaml
+│     │  ├─ SetupView.xaml                 # Thiết lập: ví, nhóm, luật (10.5)
 │     │  ├─ HistoryPage.xaml
 │     │  └─ SettingsPage.xaml
 │     ├─ ViewModels/                       # 1 ViewModel cho mỗi Page
@@ -243,6 +243,7 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
 
 ```jsonc
 {
+  "SetupCompleted": false,              // false = lần đầu mở app vào trang Thiết lập (10.5)
   "Tools": {
     "AdbPath": "",                      // trống = ANDROID_HOME\platform-tools\adb.exe, rồi PATH
     "AppiumCommand": "appium",          // lệnh hoặc đường dẫn appium.cmd
@@ -260,39 +261,51 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
     "RetryPerRow": 2
   },
   "Defaults": {
-    "Wallet": "Tài khoản ngân hàng",   // ví trong Money Lover tương ứng với tài khoản sao kê
-    "ExpenseCategory": "Khác",          // trống = dòng không khớp luật là lỗi "Chưa phân loại"
-    "IncomeCategory": "Thu nhập khác",
+    "Wallet": "TP Bank",                // ví trong Money Lover tương ứng với tài khoản sao kê (khớp chính xác)
+    "ExpenseCategory": "Other Expense", // trống = dòng không khớp luật là lỗi "Chưa phân loại"
+    "IncomeCategory": "Other Income",
     "NoteTemplate": "{description}"     // placeholder: {description}, {counterpartName}, {txnCode}
   },
   "Wallets": {
     // số tài khoản → tên ví trong app (tùy chọn, ưu tiên hơn Defaults.Wallet)
-    // "0353xxxxxxx": "Tài khoản ngân hàng"
+    // "0999xxxxxxx": "TP Bank"
   },
   "KnownCategories": {
-    // danh sách nhóm có trong app, dùng cho dropdown ở màn hình Xem trước / Luật
-    "Chi": ["Ăn uống", "Di chuyển", "Mua sắm", "Hóa đơn", "Khác"],
-    "Thu": ["Lương", "Thu nhập khác"]
+    // cây nhóm như trong app: nhóm cha + Children (Money Lover chỉ có 2 cấp)
+    "Chi": [
+      { "Name": "Food & Beverage", "Children": ["Café", "Restaurants"] },
+      { "Name": "Health & Fitness", "Children": ["Fitness"] },
+      { "Name": "Fitness" },
+      { "Name": "Other Expense" }
+    ],
+    "Thu": [ { "Name": "Salary" }, { "Name": "Incoming transfer" }, { "Name": "Other Income" } ]
   },
   "CategoryRules": [ /* xem 7.2 */ ],
   "Selectors": {
-    "AddButton":          { "by": "id",   "value": "TODO" },
+    // text lấy từ ảnh chụp app (giao diện tiếng Anh) — tạm thời; TODO cần resource-id từ uiautomator dump
+    "AddButton":          { "by": "id",   "value": "TODO" },            // nút "+" giữa thanh dưới
+    "TypeTabExpense":     { "by": "text", "value": "Expense" },         // tab đầu màn Add transaction
+    "TypeTabIncome":      { "by": "text", "value": "Income" },
+    "WalletField":        { "by": "id",   "value": "TODO" },            // đọc text để biết ví đang chọn
+    "WalletItem":         { "by": "text", "value": "{name}" },          // khớp CHÍNH XÁC
     "AmountField":        { "by": "id",   "value": "TODO" },
-    "KeypadDigit":        { "by": "xpath","value": "TODO" },   // dùng {d} làm placeholder chữ số
-    "KeypadDone":         { "by": "text", "value": "TODO" },
-    "CategoryField":      { "by": "text", "value": "Chọn nhóm" },
-    "CategoryTabExpense": { "by": "text", "value": "TODO" },
-    "CategoryTabIncome":  { "by": "text", "value": "TODO" },
+    "KeypadDigit":        { "by": "id",   "value": "TODO" },            // {d} = chữ số
+    "KeypadTripleZero":   { "by": "text", "value": "000" },
+    "KeypadClear":        { "by": "text", "value": "C" },
+    "KeypadNext":         { "by": "id",   "value": "TODO" },            // nút ">" xanh dương
+    "CategoryField":      { "by": "text", "value": "Select category" },
     "CategoryItem":       { "by": "text", "value": "{name}" },
-    "WalletField":        { "by": "id",   "value": "TODO" },   // đọc text của nó để biết ví đang chọn
-    "WalletItem":         { "by": "text", "value": "{name}" },
-    "DateField":          { "by": "id",   "value": "TODO" },
-    "NoteField":          { "by": "id",   "value": "TODO" },
-    "SaveButton":         { "by": "text", "value": "Lưu" }
+    "NoteField":          { "by": "text", "value": "Write note" },
+    "DateField":          { "by": "id",   "value": "TODO" },            // chưa thấy trên màn hình
+    "SaveButton":         { "by": "text", "value": "Save" }
   }
 }
 ```
 
+- **Định danh nhóm bằng đường dẫn:** nhóm cha là `"Tên"`, nhóm con là `"Cha > Con"` (`CategoryTree`). Dạng này được dùng ở mọi nơi: `Defaults.*Category`, `CategoryRules[].category`, cột Nhóm trên Xem trước và `state.json`.
+  - **Lý do:** Money Lover cho phép một nhóm con trùng tên với nhóm cha khác. App của người dùng có "Fitness", "Home Maintenance", "Makeup", "Streaming Service" vừa là nhóm cha vừa là nhóm con. Riêng "Beauty > Cắt Tóc" có **hai** nhóm con trùng hẳn tên, nên được báo cảnh báo trùng; người dùng nên đổi tên một nhóm trong app.
+  - **Tương thích ngược:** config cũ dạng danh sách phẳng (`"Chi": ["A", "B"]`) vẫn bind được, mỗi phần tử thành một nhóm cha.
+  - **Khi tự động chọn nhóm (8.2 bước 6):** tách đường dẫn ra. Nhóm con thì cuộn tới nhóm cha trước, rồi chọn phần tử có tên khớp **ngay sau** nhóm cha đó, để không bấm nhầm nhóm cha cùng tên.
 - File config có comment (`//`). `Microsoft.Extensions.Configuration.Json` đọc được comment. Khi app **ghi lại** config (lưu luật/cài đặt) thì ghi bằng `System.Text.Json` và comment sẽ mất. Chấp nhận được, vì bản mặc định có comment vẫn nằm trong app.
 - Mọi `TODO` được điền sau khi soi UI (xem mục 12). Comment chỉ đặt **ngoài** chuỗi `value`.
 - `Selectors` chỉ sửa bằng file JSON (nút "Mở file cấu hình" trong Cài đặt). Sửa xong bấm "Tải lại cấu hình", không cần khởi động lại app.
@@ -301,13 +314,16 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
 
 ```jsonc
 "CategoryRules": [
-  { "match": ["NAP TIEN VI MOMO"],            "type": "Chi", "action": "Skip" },   // chuyển sang ví khác, không phải chi tiêu
-  { "match": ["GRAB", "BE GROUP", "XANH SM"], "type": "Chi", "category": "Di chuyển" },
-  { "match": ["SHOPEE", "LAZADA"],            "type": "Chi", "category": "Mua sắm" },
-  { "match": ["TT QR"],                       "type": "Chi", "category": "Ăn uống" },
-  { "match": ["LUONG", "SALARY"],             "type": "Thu", "category": "Lương" }
+  { "match": ["TIEN NUOC", "CAP NUOC"],        "type": "Chi", "category": "Water Bill" },
+  { "match": ["GRAB", "BE GROUP", "XANH SM"], "type": "Chi", "category": "Transportation" },
+  { "match": ["SHOPEE", "LAZADA"],            "type": "Chi", "category": "Shopping" },
+  { "match": ["LUONG", "SALARY"],             "type": "Thu", "category": "Salary" },
+  { "match": ["CK DEN", "NHAN TIEN"],         "type": "Thu", "category": "Incoming transfer" },
+  { "match": ["CHUYEN VI NOI BO"],            "action": "Skip" }   // ví dụ dùng Skip
 ]
 ```
+
+> "TT QR" và "NAP TIEN VI MOMO" chỉ là **kênh thanh toán**, không cho biết mua gì. Cùng một kênh có thể là bất kỳ nhóm nào: hóa đơn, giải trí, ăn uống... Vì vậy không nên có luật cố định cho hai từ khóa này; để chúng rơi về nhóm mặc định rồi sửa trên Xem trước.
 
 - **Vùng so khớp:** `Mô tả giao dịch` + `Tên tài khoản` + `Tài khoản đối ứng`, đã chuẩn hóa (bỏ dấu tiếng Việt, chữ thường, gộp khoảng trắng). Keyword cũng được chuẩn hóa như vậy.
 - **Cách khớp:** "chứa chuỗi" (contains), khớp bất kỳ keyword nào trong `match` là khớp. Có thể thêm `"regex": "..."` cho trường hợp đặc biệt.
@@ -331,16 +347,26 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
 **Chế độ chạy thử (thay cho `--dry-run`):** nút "Chạy thử" làm bước 4 và đi qua 8.2 cho **1 dòng đầu** nhưng **không bấm Lưu**. Thay vào đó app bấm Back hoặc hủy, để kiểm tra selector mà không tạo giao dịch.
 
 ### 8.2 Nhập một giao dịch
-1. Đảm bảo đang ở màn hình chính: nếu không thì `Back` tối đa 3 lần rồi `ActivateApp`.
-2. Bấm `AddButton`.
-3. **Số tiền:** thử `SendKeys` vào `AmountField`. Nếu giá trị đọc lại (sau khi bỏ dấu phân cách) không khớp thì chuyển sang `AmountKeypad`, bấm từng chữ số rồi bấm `KeypadDone`.
-4. **Nhóm:** bấm `CategoryField`, chọn tab Chi/Thu theo `Loai`, rồi cuộn tới `CategoryItem` (dùng `UiScrollable.scrollIntoView`) và bấm.
-5. **Ví:** đọc text của `WalletField`. Chỉ khi nó khác `Vi` thì mới bấm `WalletField` rồi chọn `WalletItem`.
-6. **Ngày:** chỉ làm khi ngày ≠ hôm nay (theo giờ máy PC). Bấm `DateField` rồi điều hướng DatePicker (xem 8.3).
-7. **Ghi chú:** `SendKeys` vào `NoteField` nếu có.
-8. Bấm `SaveButton` và chờ quay về màn hình chính (điều kiện: `AddButton` hiển thị lại).
 
-Giữa các bước 2 đến 7 runner kiểm tra `CancellationToken`. Từ bước 8 trở đi thì không hủy nữa.
+Luồng dưới đây dựa trên ảnh chụp màn "Add transaction" của Money Lover (giao diện tiếng Anh). Màn này gồm:
+- **Tab loại** ở đầu màn: Expense | Income | Debt/Loan.
+- **Dòng ví**, hiện tên ví đang chọn.
+- **Ô số tiền**, kèm **bàn phím số riêng của app** (0–9, `000`, `.`, `C`, ⌫, + − × ÷, nút `>` xanh dương) và hàng gợi ý số tiền nhanh.
+- **"Select category"**, **"Write note"**, nút **"Save"**.
+
+Màn này **không thấy ô ngày**; cần dump UI để biết ô ngày nằm ở đâu.
+
+1. Đảm bảo đang ở màn hình chính: nếu không thì `Back` tối đa 3 lần rồi `ActivateApp`.
+2. Bấm `AddButton` (nút "+" giữa thanh điều hướng dưới).
+3. **Loại:** bấm `TypeTabExpense` hoặc `TypeTabIncome` theo `Loai`. Bước này phải làm **trước** khi chọn nhóm, vì danh sách nhóm phụ thuộc vào loại.
+4. **Ví:** đọc text của `WalletField`. Chỉ khi nó khác `Vi` thì bấm vào rồi chọn `WalletItem`. Phải khớp **chính xác** tên ví, vì app có hai ví tên gần giống nhau ("TP Bank" và "TPBank").
+5. **Số tiền:** bấm `KeypadClear`, rồi bấm lần lượt các chữ số (`KeypadDigit`). Gặp cụm "000" thì dùng `KeypadTripleZero` cho nhanh. Bấm `KeypadNext` để xác nhận, sau đó đọc lại `AmountField`, bỏ dấu phân cách và phần ".00", rồi so khớp với số tiền cần nhập. Chỉ khi bàn phím không xuất hiện thì mới thử `SendKeys`.
+6. **Nhóm:** bấm `CategoryField`, cuộn tới `CategoryItem` (`UiScrollable.scrollIntoView`, khớp chính xác tên) rồi bấm.
+7. **Ngày:** chỉ làm khi ngày ≠ hôm nay (theo giờ máy PC). Bấm `DateField` rồi điều hướng DatePicker (xem 8.3).
+8. **Ghi chú:** bấm `NoteField`, `SendKeys` nội dung, rồi ẩn bàn phím.
+9. Bấm `SaveButton` và chờ quay về màn trước (điều kiện: `AddButton` hiển thị lại).
+
+Giữa các bước 2 đến 8 runner kiểm tra `CancellationToken`. Từ bước 9 trở đi thì không hủy nữa.
 
 ### 8.3 Chọn ngày
 - Ưu tiên: nếu DatePicker có ô nhập trực tiếp (chế độ bàn phím của Material DatePicker) thì gõ ngày.
@@ -394,19 +420,37 @@ Hiện trạng thái thiết bị (●), Appium (●), và file sao kê đang m�
 - **Nút:** "Dừng" (dừng sau bước an toàn, xem 4) và "Tiếp tục" (chạy tiếp các dòng còn lại).
 - **Danh sách kết quả** theo dòng (✔ / ✖ / ⏭). Bấm vào dòng lỗi thì xem lý do, ảnh chụp màn hình, và nút "Mở page source".
 - **Log trực tiếp** (sink Serilog → `ObservableCollection`, giới hạn 2000 dòng gần nhất).
-- **Khi đang chạy:** khóa các trang Xem trước / Luật / Cài đặt. Đóng cửa sổ lúc này thì app hỏi xác nhận rồi dừng an toàn.
+- **Khi đang chạy:** khóa các trang Xem trước / Thiết lập / Cài đặt. Đóng cửa sổ lúc này thì app hỏi xác nhận rồi dừng an toàn.
 
-### 10.5 Luật phân loại
-- Danh sách `CategoryRules` có thêm / sửa / xóa và đổi thứ tự.
-- **Form sửa luật:** keywords (dạng chip), loại, nhóm, hành động.
-- **Ô "Thử luật":** dán một mô tả, app hiện luật nào khớp và nhóm kết quả.
-- **Lưu:** ghi vào `appsettings.json` người dùng, rồi phân loại lại các dòng đang xem trước. Các dòng đã bị người dùng sửa tay thì giữ nguyên.
+### 10.5 Thiết lập (ví, nhóm, luật phân loại)
+
+**Lần đầu mở app** (`SetupCompleted = false`), app vào thẳng trang này và hiện banner chào mừng. Bấm "Lưu và bắt đầu" thì app ghi `SetupCompleted = true` rồi chuyển sang Xem trước. Những lần sau trang vẫn nằm trên thanh điều hướng, nút lúc này là "Lưu thiết lập".
+
+Trang gồm 4 phần:
+1. **Ví:** `Defaults.Wallet`, tên ví trong Money Lover ứng với tài khoản sao kê. Bắt buộc.
+2. **Nhóm:** hai ô nhập nhiều dòng cho cây `KnownCategories.Chi` / `Thu`. Mỗi dòng một nhóm; **nhóm con thụt đầu dòng hoặc bắt đầu bằng "-"** ngay dưới nhóm cha của nó. Dòng trống được bỏ qua. Kèm hai ô chọn nhóm mặc định `Defaults.ExpenseCategory` / `IncomeCategory`, cho gõ tự do.
+3. **Luật phân loại:** bảng `CategoryRules` theo thứ tự ưu tiên, mỗi luật có các cột:
+   - **#**: thứ tự ưu tiên.
+   - **Từ khóa**: cách nhau bởi dấu phẩy.
+   - **Loại**: Chi / Thu / Cả hai.
+   - **Hành động**: Nhập / Bỏ qua.
+   - **Nhóm**: chọn từ danh sách nhóm của loại tương ứng; bị khóa khi hành động là Bỏ qua.
+   - **Nút trên từng dòng**: Lên / Xuống / Xóa.
+
+   "Thêm luật" chèn luật mới lên đầu bảng. Trường `Regex` không sửa được trên UI nhưng vẫn được giữ khi lưu.
+4. **Thử luật:** dán một mô tả và chọn Chi/Thu, app cho biết luật nào khớp và kết quả là nhóm gì, bị Bỏ qua, hay rơi về nhóm mặc định. App dùng thiết lập đang sửa, chưa cần lưu.
+
+**Lưu** (`SettingsFile.Validate` rồi `SettingsFile.Save`):
+- **Lỗi chặn lưu:** thiếu ví; luật không có từ khóa; luật "Nhập" chưa chọn nhóm; regex sai.
+- **Cảnh báo, vẫn cho lưu:** danh sách nhóm trống; nhóm mặc định hoặc nhóm của luật không có trong danh sách nhóm.
+- **Cách ghi:** app sửa trên bản sao của cấu hình hiện tại, nên các mục không có trên UI (Selectors, Appium...) được giữ nguyên. File được ghi atomic, comment trong file sẽ mất. Sau đó app nạp lại config ngay, trang Xem trước phân loại lại và giữ các chỉnh sửa tay.
+- **Trước khi lưu:** nhãn "Chưa lưu" báo có thay đổi chưa ghi. "Hoàn tác" đọc lại từ file.
 
 ### 10.6 Lịch sử
 Bảng các dòng trong `state.json`, có lọc theo trạng thái, nút xóa trạng thái (mục 9) và nút mở ảnh lỗi.
 
 ### 10.7 Cài đặt
-Form cho `Tools`, `Appium`, `Timing`, `Defaults`, `Wallets`, `KnownCategories`. Có các nút "Mở file cấu hình", "Tải lại cấu hình", "Mở thư mục dữ liệu".
+Form cho `Tools`, `Appium`, `Timing`, `Wallets` (ánh xạ số tài khoản → ví), `Defaults.NoteTemplate`. Ví, nhóm và luật nằm ở trang Thiết lập (10.5). Có các nút "Mở file cấu hình", "Tải lại cấu hình", "Mở thư mục dữ liệu".
 
 ### 10.8 Yêu cầu chung
 - **Không chặn UI thread:** mọi việc đọc file, gọi `adb`, gọi Appium đều chạy `async`.
@@ -430,11 +474,14 @@ Form cho `Tools`, `Appium`, `Timing`, `Defaults`, `Wallets`, `KnownCategories`. 
 
 Với từng màn hình bên dưới, mở trên điện thoại rồi chạy `adb shell uiautomator dump /sdcard/ui.xml; adb pull /sdcard/ui.xml` (hoặc dùng Appium Inspector). Ghi `resource-id`, `text`, `content-desc` vào `Selectors`:
 
-- [ ] Màn hình chính: nút "+"
-- [ ] Màn hình thêm giao dịch: ô số tiền, nhóm, ví (và text hiển thị ví đang chọn), ngày, ghi chú, nút Lưu
-- [ ] Bàn phím số của app (nếu có): các phím 0–9, `000`, Xong
-- [ ] Màn hình chọn nhóm: tab Chi / Thu, item nhóm, vùng cuộn
-- [ ] Màn hình chọn ví
+Đã có **ảnh chụp** (chưa có dump) của các màn: danh sách ví, danh sách giao dịch, Add transaction. Ảnh chỉ cho biết `text`, chưa có `resource-id`.
+
+- [ ] Màn hình chính: nút "+" giữa thanh dưới
+- [~] Add transaction: đã biết tab Expense/Income, "Select category", "Write note", "Save". Còn thiếu id của ô số tiền, dòng ví và nút "+"
+- [~] Bàn phím số của app: đã biết có 0–9, `000`, `C`, `>`. Còn thiếu id các phím; phím "0" trùng text với ô số tiền
+- [ ] Add transaction **sau khi bấm `>`** (xem ô ngày có hiện ra không)
+- [ ] Màn chọn nhóm (sau khi bấm "Select category"): item nhóm, vùng cuộn, có tab hay không
+- [ ] Màn chọn ví (sau khi bấm dòng ví)
 - [ ] DatePicker: tháng trước/sau, ô ngày, OK
 
 Ưu tiên `resource-id`, sau đó `content-desc`, cuối cùng mới đến `text`. Tránh xpath theo index vì dễ gãy khi app cập nhật.
@@ -474,6 +521,8 @@ Với từng màn hình bên dưới, mở trên điện thoại rồi chạy `a
 | Danh sách nhóm dài, phải cuộn | `UiScrollable.scrollIntoView` |
 | Màn hình khóa / Wi-Fi rớt | Kiểm tra trạng thái màn hình trước mỗi dòng; lỗi kết nối thì dừng, giữ state, cho phép Tiếp tục |
 | Nhập trùng khi mất kết nối đúng lúc Lưu | Đánh dấu "cần kiểm tra tay", không tự chọn lại |
+| Nhập trùng với giao dịch người dùng **đã nhập tay** trước đó (state.json không biết), ví dụ những ngày đầu kỳ sao kê đã được nhập tay | Người dùng bỏ chọn trên Xem trước. Sau v1: "Chỉ nhập từ ngày…", và cảnh báo khi số tiền + ngày trùng giao dịch đã có trong app |
+| Hai ví tên gần giống ("TP Bank" và "TPBank") | Chọn ví bằng khớp chính xác text, không dùng `textContains` |
 | Lộ dữ liệu tài chính cá nhân | Che số TK, không hiển thị số dư, dữ liệu nằm trong `%LOCALAPPDATA%`, `.gitignore`, file mẫu ẩn danh |
 | Tự động hóa UI có thể trái điều khoản app | Chỉ dùng cho tài khoản của chính mình, tốc độ giống người dùng (có delay) |
 

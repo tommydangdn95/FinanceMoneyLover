@@ -8,6 +8,9 @@ namespace MoneyLoverAutoInput.Core.Configuration;
 /// </summary>
 public sealed class AppSettings
 {
+    /// <summary>false = lần đầu dùng app: mở màn Thiết lập trước (SPEC 10.5).</summary>
+    public bool SetupCompleted { get; set; }
+
     public ToolsOptions Tools { get; set; } = new();
     public AppiumOptions Appium { get; set; } = new();
     public TimingOptions Timing { get; set; } = new();
@@ -16,15 +19,19 @@ public sealed class AppSettings
     /// <summary>Số tài khoản → tên ví trong app.</summary>
     public Dictionary<string, string> Wallets { get; set; } = new();
 
-    /// <summary>"Chi"/"Thu" → danh sách nhóm có trong app.</summary>
-    public Dictionary<string, List<string>> KnownCategories { get; set; } = new();
+    /// <summary>"Chi"/"Thu" → cây nhóm có trong app (nhóm cha + nhóm con).</summary>
+    public Dictionary<string, List<CategoryNode>> KnownCategories { get; set; } = new();
 
     public List<CategoryRule> CategoryRules { get; set; } = new();
 
     public Dictionary<string, SelectorOptions> Selectors { get; set; } = new();
 
+    /// <summary>Mọi nhóm chọn được của một loại, dạng đường dẫn ("Cha" hoặc "Cha &gt; Con").</summary>
     public IReadOnlyList<string> GetKnownCategories(TransactionType type) =>
-        KnownCategories.TryGetValue(type.ToString(), out var list) ? list : Array.Empty<string>();
+        CategoryTree.Flatten(GetCategoryTree(type));
+
+    public IReadOnlyList<CategoryNode> GetCategoryTree(TransactionType type) =>
+        KnownCategories.TryGetValue(type.ToString(), out var list) ? list : Array.Empty<CategoryNode>();
 }
 
 public sealed class ToolsOptions

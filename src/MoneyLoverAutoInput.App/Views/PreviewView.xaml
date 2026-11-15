@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vm="clr-namespace:MoneyLoverAutoInput.App.ViewModels"
+             xmlns:views="clr-namespace:MoneyLoverAutoInput.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:PreviewViewModel}"
              AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver">
@@ -63,10 +64,10 @@
         </Grid>
 
         <!-- Lỗi file / lỗi luật -->
-        <ui:InfoBar Grid.Row="1" Margin="0,12,0,0" Title="Cần chú ý"
-                    Severity="Warning" IsClosable="False"
-                    IsOpen="{Binding HasMessages, Mode=OneWay}"
-                    Message="{Binding Messages}" />
+        <views:Banner Grid.Row="1" Margin="0,12,0,0" Title="Cần chú ý"
+                      AccentBrush="{DynamicResource SystemFillColorCautionBrush}"
+                      Visibility="{Binding HasMessages, Converter={StaticResource BoolToVisibility}}"
+                      Message="{Binding Messages}" />
 
         <!-- Bộ lọc -->
         <Grid Grid.Row="2" Margin="0,12,0,8"

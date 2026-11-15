@@ -22,11 +22,15 @@ public class DefaultConfigTests
         Assert.Equal("http://127.0.0.1:4723", s.Appium.ServerUrl);
         Assert.Equal("com.bookmark.money", s.Appium.AppPackage);
         Assert.Equal(2, s.Timing.RetryPerRow);
-        Assert.Equal("Khác", s.Defaults.ExpenseCategory);
+        Assert.False(s.SetupCompleted);
+        Assert.Equal("TP Bank", s.Defaults.Wallet);
+        Assert.Equal("Other Expense", s.Defaults.ExpenseCategory);
         Assert.Equal("{description}", s.Defaults.NoteTemplate);
-        Assert.Contains("Ăn uống", s.GetKnownCategories(TransactionType.Chi));
-        Assert.Contains("Lương", s.GetKnownCategories(TransactionType.Thu));
-        Assert.Equal("Lưu", s.Selectors["SaveButton"].Value);
+        Assert.Contains("Bills & Utilities > Water Bill", s.GetKnownCategories(TransactionType.Chi));
+        Assert.Contains("Other Expense", s.GetKnownCategories(TransactionType.Chi));
+        Assert.Contains("Incoming transfer", s.GetKnownCategories(TransactionType.Thu));
+        Assert.Equal("Save", s.Selectors["SaveButton"].Value);
+        Assert.Equal("Expense", s.Selectors["TypeTabExpense"].Value);
         Assert.Equal("id", s.Selectors["AddButton"].By);
     }
 
@@ -36,15 +40,39 @@ public class DefaultConfigTests
         var rules = Bind().CategoryRules;
 
         Assert.NotEmpty(rules);
-        var skip = rules[0];
-        Assert.Equal(RuleAction.Skip, skip.Action);
-        Assert.Equal(TransactionType.Chi, skip.Type);
-        Assert.Contains("NAP TIEN VI MOMO", skip.Match);
-
         var salary = rules.Single(r => r.Match.Contains("LUONG"));
         Assert.Equal(TransactionType.Thu, salary.Type);
         Assert.Equal(RuleAction.Import, salary.Action);
-        Assert.Equal("Lương", salary.Category);
+        Assert.Equal("Salary", salary.Category);
+    }
+
+    [Fact]
+    public void Default_config_is_valid_and_consistent()
+    {
+        var v = SettingsFile.Validate(Bind());
+
+        Assert.Empty(v.Errors);
+        Assert.Empty(v.Warnings); // mọi nhóm dùng trong luật/mặc định đều có trong KnownCategories
+    }
+
+    /// <summary>
+    /// Kiểm tra config người dùng thật mà không đưa vào repo:
+    /// MLAI_USER_CONFIG = đường dẫn appsettings.json trong %LOCALAPPDATA%\MoneyLoverAutoInput.
+    /// </summary>
+    [Fact]
+    public void User_config_if_provided_binds_and_has_no_errors()
+    {
+        var path = Environment.GetEnvironmentVariable("MLAI_USER_CONFIG");
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+
+        var s = new ConfigurationBuilder().AddJsonFile(path).Build().Get<AppSettings>()!;
+        var v = SettingsFile.Validate(s);
+
+        foreach (var w in v.Warnings) Console.WriteLine("WARN: " + w);
+        Console.WriteLine($"Chi: {s.GetKnownCategories(TransactionType.Chi).Count} nhóm, " +
+                          $"Thu: {s.GetKnownCategories(TransactionType.Thu).Count} nhóm, " +
+                          $"{s.CategoryRules.Count} luật");
+        Assert.Empty(v.Errors);
     }
 
     [Fact]

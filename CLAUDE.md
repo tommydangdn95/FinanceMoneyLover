@@ -12,13 +12,14 @@ Hướng dẫn cho Claude Code khi làm việc trong repo này. **Đặc tả đ
 - **Core:** `Input/` (đọc sao kê, validate), `Categorization/`, `State/`, `Import/StatementLoader` và `RowStatus`, `Privacy/Masking`, `AppDataPaths`.
 - **App:** khung WPF (FluentWindow, điều hướng, Host/DI, Serilog, chặn hai bản app chạy cùng lúc, bắt exception toàn cục).
   - **Xem trước** chạy được đầy đủ: mở hoặc kéo thả file, phân loại, sửa nhóm và ghi chú, lọc, tìm kiếm, tính tổng, tự phân loại lại khi file config đổi.
+  - **Thiết lập** (SPEC 10.5): ví, danh sách nhóm, nhóm mặc định, bảng luật (thêm, xóa, đổi thứ tự), thử luật, lưu có kiểm tra hợp lệ (`Core/Configuration/SettingsFile`). Lần đầu mở app (`SetupCompleted = false`) sẽ vào thẳng trang này.
   - **Cài đặt** mới có các nút mở thư mục dữ liệu, mở file config, tải lại config.
 
 **Chưa làm**, theo thứ tự nên làm:
 1. `Core/Environment` và trang Môi trường (adb, Appium).
 2. `Core/Automation` và `ImportRunner`, rồi trang Chạy. Phần này cần selector thật từ `uiautomator dump`; selector hiện vẫn toàn `TODO`.
-3. Trang Luật phân loại, trang Lịch sử.
-4. Trang Cài đặt dạng form, nhớ kích thước cửa sổ.
+3. Trang Lịch sử.
+4. Trang Cài đặt dạng form (Tools/Appium/Timing/Wallets), nhớ kích thước cửa sổ.
 
 Các nút "Chạy thử" và "Bắt đầu nhập" đang bị disable có chủ đích. `PreviewViewModel.GetRowsToImport()` là đầu vào cho `ImportRunner`.
 
@@ -55,12 +56,18 @@ Dữ liệu runtime khi chạy thử nằm ở `%LOCALAPPDATA%\MoneyLoverAutoInp
 ## Quy tắc kiến trúc
 
 - **Core không được tham chiếu WPF** (không dùng `System.Windows`, `Dispatcher`). Core giao tiếp với UI qua `IProgress<T>`, `CancellationToken`, event, interface.
+- **Không dùng `ui:InfoBar`** của WPF-UI 4.3: khi bind `IsOpen` nó không hiển thị. Dùng `Views/Banner` và bật/tắt bằng `Visibility`.
+- **Ghi config từ UI:** luôn sửa trên `SettingsFile.Clone(...)`, không bao giờ sửa trực tiếp `IOptionsMonitor.CurrentValue`. Lưu bằng `SettingsFile.Save` (atomic) rồi gọi `IConfigurationRoot.Reload()`.
+- **Binding lệnh từ trong cell template của `DataGrid`:** dùng `RelativeSource AncestorType=UserControl`, không dùng `ElementName`.
 - **MVVM nghiêm ngặt:** code-behind của View chỉ chứa `InitializeComponent` và phần thuần hiển thị. Logic đặt trong ViewModel (`[ObservableProperty]`, `[RelayCommand]`). Dialog và chọn file đi qua service để test được.
 - **DI** qua Generic Host trong `App.xaml.cs`. Config dùng `IOptionsMonitor<T>`, vì người dùng có thể bấm "Tải lại cấu hình" lúc app đang mở.
 - **Config:**
   - Chỉ đọc file người dùng, **không merge** với `appsettings.default.json`, vì binder gộp mảng theo index (SPEC 5.1).
   - Giá trị mặc định đặt ở initializer của class `AppSettings`. Initializer của **List/Dictionary phải để rỗng**, vì binder sẽ append vào chứ không thay thế.
   - Thêm key mới thì sửa cả `AppSettings.cs` lẫn `appsettings.default.json`. `DefaultConfigTests` sẽ bắt lỗi bind.
+- **Nhóm là cây 2 cấp** (`KnownCategories: { "Chi": [ { Name, Children } ] }`).
+  - Mọi nơi khác tham chiếu nhóm bằng **đường dẫn** `"Cha > Con"` (`CategoryTree.PathOf/Split/Flatten`). Không so khớp nhóm bằng tên lá, vì có tên trùng giữa nhóm cha và nhóm con.
+  - Cây nhóm thật của người dùng chỉ nằm trong config ở `%LOCALAPPDATA%`, vì có tên người thân. **Không** copy cây đó vào `appsettings.default.json` hay vào test.
 - **Lỗi của một dòng giao dịch:**
   - `TransactionRow.DataErrors` là lỗi cố định (ngày, tiền, mã giao dịch).
   - "Chưa phân loại" được tính động trong `Errors` / `CanImport` và tự hết khi người dùng chọn nhóm.
@@ -104,6 +111,9 @@ Dữ liệu runtime khi chạy thử nằm ở `%LOCALAPPDATA%\MoneyLoverAutoInp
 ## Lưu ý thiết bị
 
 - Máy Windows cần có Node.js + Appium 2 + `uiautomator2`, Android Platform-Tools, JDK 17, cùng `ANDROID_HOME` và `JAVA_HOME`. App không đóng gói sẵn những thứ này mà chỉ kiểm tra rồi hướng dẫn cài.
-- Money Lover phải để tiếng Việt. Khi chạy, màn hình phải mở khóa và bật "Stay awake".
+- Money Lover của người dùng để **giao diện tiếng Anh**: selector theo text ("Save", "Select category", "Write note", "Expense"/"Income"), tên nhóm ("Water Bill", "Entertainment", "Incoming transfer"...) và tên ví đều tiếng Anh. Ví dùng cho sao kê là **"TP Bank"**; có một ví khác tên "TPBank" (liên kết, không dùng), nên phải khớp tên ví **chính xác**.
+- Màn Add transaction dùng **bàn phím số riêng của app** và chưa thấy ô ngày (chi tiết ở SPEC 8.2). Selector hiện mới lấy từ ảnh chụp; còn thiếu `resource-id`.
+- Người dùng đã **nhập tay** một phần giao dịch của kỳ sao kê, nên có nguy cơ nhập trùng (SPEC 14).
+- Khi chạy, màn hình phải mở khóa và bật "Stay awake".
 - Máy Xiaomi/Redmi/POCO phải bật thêm "USB debugging (Security settings)".
 - Chưa xác minh `AppPackage` `com.bookmark.money`. Kiểm tra bằng `adb shell dumpsys window | findstr mCurrentFocus`.

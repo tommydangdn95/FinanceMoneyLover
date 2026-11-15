@@ -1,0 +1,23 @@
+<UserControl x:Class="MoneyLoverAutoInput.App.Views.Banner"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Self">
+    <!-- Thay cho ui:InfoBar (WPF-UI 4.3 không hiện khi bind IsOpen). Ẩn/hiện bằng Visibility của chính control. -->
+    <Border CornerRadius="6" Padding="14,10" BorderThickness="1"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{Binding AccentBrush, ElementName=Self}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Width="4" CornerRadius="2" Margin="0,0,12,0" Background="{Binding AccentBrush, ElementName=Self}" />
+            <StackPanel Grid.Column="1">
+                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Title, ElementName=Self}" />
+                <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding Message, ElementName=Self}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

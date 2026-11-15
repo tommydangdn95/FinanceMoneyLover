@@ -96,6 +96,7 @@ public partial class App : Application
         services.AddSingleton<IShellService, ShellService>();
 
         services.AddSingleton<PreviewViewModel>();
+        services.AddSingleton<SetupViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
