@@ -37,6 +37,63 @@ public class AutomationLogicTests
         Assert.Equal(504, rows[0].Bounds.CenterY);
     }
 
+    /// <summary>
+    /// Page source Appium (UiAutomator2) đặt TÊN THẺ theo class, không có thẻ &lt;node&gt; như uiautomator dump.
+    /// Lỗi thật lần chạy thử đầu: parser chỉ đọc &lt;node&gt; → không thấy nhóm nào → báo "Không có nhóm".
+    /// Màn dưới mô phỏng picker mở với "Entertainment" đang được chọn sẵn (có select_indicator).
+    /// </summary>
+    [Fact]
+    public void Parser_reads_appium_page_source_format_with_preselected_item()
+    {
+        const string xml = $"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <hierarchy index="0" class="hierarchy" rotation="0" width="1080" height="2094">
+              <androidx.recyclerview.widget.RecyclerView index="0" resource-id="com.bookmark.money:id/recycler_view" clickable="false" scrollable="true" bounds="[0,342][1080,2094]">
+                <android.widget.RelativeLayout index="0" clickable="true" bounds="[0,391][1080,538]">
+                  <android.widget.TextView index="1" text="Education" resource-id="{NameId}" clickable="false" bounds="[189,433][1080,495]" />
+                </android.widget.RelativeLayout>
+                <android.widget.RelativeLayout index="1" clickable="true" bounds="[0,856][1080,1003]">
+                  <android.widget.TextView index="1" text="Entertainment" resource-id="{NameId}" clickable="false" bounds="[189,898][933,960]" />
+                  <android.widget.ImageView index="2" resource-id="com.bookmark.money:id/select_indicator" clickable="false" bounds="[975,898][1038,961]" />
+                </android.widget.RelativeLayout>
+                <android.widget.RelativeLayout index="2" clickable="true" bounds="[0,1003][1080,1153]">
+                  <android.widget.ImageView index="0" resource-id="{ChildId}" bounds="[42,1003][84,1153]" />
+                  <android.widget.TextView index="1" text="Chụp Ảnh" resource-id="{NameId}" bounds="[189,1047][1080,1109]" />
+                </android.widget.RelativeLayout>
+                <android.widget.RelativeLayout index="3" clickable="true" bounds="[0,1303][1080,1450]">
+                  <android.widget.ImageView index="0" resource-id="{ChildId}" bounds="[42,1303][84,1379]" />
+                  <android.widget.TextView index="1" text="SHOW MORE…" clickable="false" bounds="[189,1351][1038,1402]" />
+                </android.widget.RelativeLayout>
+              </androidx.recyclerview.widget.RecyclerView>
+            </hierarchy>
+            """;
+
+        var rows = Parse(xml.Trim());
+
+        Assert.Equal(new[] { "Education", "Entertainment", "Chụp Ảnh", "" }, rows.Select(r => r.Name));
+        Assert.True(rows[3].IsShowMore);
+        var tap = Assert.IsType<CategorySearchStep.Tap>(CategorySearch.Next(rows, "Entertainment", null, false));
+        Assert.Equal(929, tap.Row.Bounds.CenterY);
+        Assert.IsType<CategorySearchStep.ExpandShowMore>(CategorySearch.Next(rows, "Entertainment", "Movies", false));
+    }
+
+    [Fact]
+    public void Parser_accepts_rows_with_other_layout_like_a_preselected_item()
+    {
+        // Dòng đang được chọn sẵn có thể là LinearLayout (không phải RelativeLayout) và lồng thêm một tầng.
+        var selected =
+            """<node class="android.widget.LinearLayout" clickable="true" bounds="[0,400][1080,547]">""" +
+            """<node class="android.widget.FrameLayout" clickable="false" bounds="[0,400][1080,547]">""" +
+            $"""<node resource-id="{NameId}" text="Entertainment" bounds="[189,440][1080,500]"/></node></node>""";
+
+        var rows = Parse(Page(selected, Row(547, "Chụp Ảnh", true)));
+
+        Assert.Equal(2, rows.Count);
+        Assert.Equal("Entertainment", rows[0].Name);
+        Assert.False(rows[0].IsChild);
+        Assert.IsType<CategorySearchStep.Tap>(CategorySearch.Next(rows, "Entertainment", null, false));
+    }
+
     [Fact]
     public void Search_parent_category_taps_parent()
     {

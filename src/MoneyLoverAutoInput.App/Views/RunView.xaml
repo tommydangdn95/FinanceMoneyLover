@@ -57,10 +57,16 @@
         </ui:Card>
 
         <!-- Kết quả từng dòng -->
-        <ListView Grid.Row="2" ItemsSource="{Binding Results}" Background="Transparent" BorderThickness="0">
-            <ListView.ItemTemplate>
+        <!--
+            Danh sách kết quả: ItemsControl (không cần chọn dòng). KHÔNG dùng ListView: WPF tô chữ ListViewItem
+            màu hệ thống (đen) và WPF-UI 4.3 không có style ListViewItem để BasedOn (StaticResource {x:Type ListViewItem}
+            → XamlParseException khi mở trang).
+        -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Results}" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+            <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type vm:RunResultItem}">
-                    <Grid Margin="4,4">
+                    <Grid Margin="4,4" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="28" />
                             <ColumnDefinition Width="40" />
@@ -94,13 +100,15 @@
                                    CommandParameter="{Binding}" />
                     </Grid>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        </ScrollViewer>
 
         <!-- Log -->
         <Border Grid.Row="4" CornerRadius="6" Padding="8"
                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
             <ListBox x:Name="LogList" ItemsSource="{Binding Log}" Background="Transparent" BorderThickness="0"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                      FontFamily="Consolas, Segoe UI" FontSize="12"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
         </Border>

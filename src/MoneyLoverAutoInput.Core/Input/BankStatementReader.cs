@@ -63,41 +63,46 @@ public sealed class BankStatementReader : IStatementReader
         {
             var ws = workbook.Worksheets.FirstOrDefault();
             if (ws is null) return Fail(sourceFile, "File không có sheet nào.");
-
-            var lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-            var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 0;
-            if (lastRow == 0) return Fail(sourceFile, "Sheet trống.");
-
-            var (headerRow, columns) = FindHeader(ws, Math.Min(lastRow, HeaderScanRows), lastCol);
-            if (headerRow == 0)
-            {
-                return Fail(sourceFile,
-                    "Không tìm thấy dòng tiêu đề. Cần đủ các cột: " + string.Join(", ", RequiredColumns) + ".");
-            }
-
-            var missing = RequiredColumns.Where(c => !columns.ContainsKey(c)).ToList();
-            if (missing.Count > 0)
-            {
-                return Fail(sourceFile, "Thiếu cột bắt buộc: " + string.Join(", ", missing) + ".");
-            }
-
-            var info = ReadMetadata(ws, headerRow, sourceFile);
-            var rows = new List<StatementRow>();
-
-            for (var r = headerRow + 1; r <= lastRow && rows.Count < MaxDataRows; r++)
-            {
-                var executedText = GetText(ws.Cell(r, columns[ColExecutedAt]));
-                var codeText = GetText(ws.Cell(r, columns[ColTxnCode]));
-                if (executedText.Length == 0 && codeText.Length == 0) break; // hết bảng
-
-                rows.Add(ReadRow(ws, r, columns));
-            }
-
-            return new StatementReadResult { Info = info, Rows = rows };
+            return ReadWorksheet(ws, sourceFile);
         }
     }
 
-    private static StatementReadResult Fail(string sourceFile, string error) => new()
+    /// <summary>Đọc sheet đã mở (dùng chung với <see cref="StatementReader"/>).</summary>
+    internal static StatementReadResult ReadWorksheet(IXLWorksheet ws, string sourceFile)
+    {
+        var lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
+        var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 0;
+        if (lastRow == 0) return Fail(sourceFile, "Sheet trống.");
+
+        var (headerRow, columns) = FindHeader(ws, Math.Min(lastRow, HeaderScanRows), lastCol);
+        if (headerRow == 0)
+        {
+            return Fail(sourceFile,
+                "Không tìm thấy dòng tiêu đề. Cần đủ các cột: " + string.Join(", ", RequiredColumns) + ".");
+        }
+
+        var missing = RequiredColumns.Where(c => !columns.ContainsKey(c)).ToList();
+        if (missing.Count > 0)
+        {
+            return Fail(sourceFile, "Thiếu cột bắt buộc: " + string.Join(", ", missing) + ".");
+        }
+
+        var info = ReadMetadata(ws, headerRow, sourceFile);
+        var rows = new List<StatementRow>();
+
+        for (var r = headerRow + 1; r <= lastRow && rows.Count < MaxDataRows; r++)
+        {
+            var executedText = GetText(ws.Cell(r, columns[ColExecutedAt]));
+            var codeText = GetText(ws.Cell(r, columns[ColTxnCode]));
+            if (executedText.Length == 0 && codeText.Length == 0) break; // hết bảng
+
+            rows.Add(ReadRow(ws, r, columns));
+        }
+
+        return new StatementReadResult { Info = info, Rows = rows };
+    }
+
+    internal static StatementReadResult Fail(string sourceFile, string error) => new()
     {
         Info = new StatementInfo { SourceFile = sourceFile },
         FileErrors = new[] { error },
@@ -148,7 +153,10 @@ public sealed class BankStatementReader : IStatementReader
             else if (label == accountKey) account = GetText(ws.Cell(r, 2));
         }
 
-        return new StatementInfo { SourceFile = sourceFile, Period = period, AccountNumber = account };
+        return new StatementInfo
+        {
+            SourceFile = sourceFile, Period = period, AccountNumber = account, Kind = StatementKind.BankAccount,
+        };
     }
 
     private static StatementRow ReadRow(IXLWorksheet ws, int r, IReadOnlyDictionary<string, int> cols)
@@ -239,8 +247,12 @@ public sealed class BankStatementReader : IStatementReader
         }
 
         var text = GetText(cell);
-        if (text.Length == 0) return null;
+        return text.Length == 0 ? null : ParseAmountText(text, columnName, errors);
+    }
 
+    /// <summary>Số tiền dạng text, không dấu. Lỗi được thêm vào <paramref name="errors"/> và trả null.</summary>
+    internal static long? ParseAmountText(string text, string columnName, List<string> errors)
+    {
         var body = text;
         foreach (var suffix in new[] { "VND", "đ", "₫" })
         {

@@ -148,6 +148,13 @@ public sealed class Categorizer
         {
             return wallet.Trim();
         }
+        var byKind = info.Kind switch
+        {
+            StatementKind.CreditCard => _settings.Defaults.CreditCardWallet,
+            StatementKind.Bidv => _settings.Defaults.BidvWallet,
+            _ => "",
+        };
+        if (!string.IsNullOrWhiteSpace(byKind)) return byKind.Trim();
         return _settings.Defaults.Wallet.Trim();
     }
 

@@ -87,6 +87,18 @@
                                 <TextBlock FontWeight="SemiBold" Text="Ví mặc định (bắt buộc)" />
                                 <c:SearchComboBox Margin="0,6,0,0" Height="34" ItemsSource="{Binding KnownWallets}"
                                                    Value="{Binding DefaultWallet, Mode=TwoWay}" />
+                                <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Ví cho sao kê thẻ tín dụng" />
+                                <c:SearchComboBox Margin="0,6,0,0" Height="34" ItemsSource="{Binding KnownWallets}"
+                                                   Value="{Binding CreditCardWallet, Mode=TwoWay}" />
+                                <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Ví cho bảng giao dịch BIDV" />
+                                <c:SearchComboBox Margin="0,6,0,0" Height="34" ItemsSource="{Binding KnownWallets}"
+                                                   Value="{Binding BidvWallet, Mode=TwoWay}" />
+                                <TextBlock Margin="0,12,0,0" FontWeight="SemiBold" Text="Ví mặc định khi nhập tay" />
+                                <c:SearchComboBox Margin="0,6,0,0" Height="34" ItemsSource="{Binding KnownWallets}"
+                                                   Value="{Binding ManualWallet, Mode=TwoWay}" />
+                                <TextBlock Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="Ví thẻ tín dụng / BIDV dùng khi mở đúng loại file đó; ví nhập tay là ví chọn sẵn trên màn Nhập tay. Để trống = dùng ví mặc định." />
                             </StackPanel>
                         </Grid>
                     </StackPanel>

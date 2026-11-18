@@ -25,6 +25,8 @@ state.json
 state.json.tmp
 drafts.json
 drafts.json.tmp
+manual.json
+manual.json.tmp
 logs/
 screenshots/
 appsettings.local.json

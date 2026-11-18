@@ -37,27 +37,33 @@ public static class CategoryListParser
     {
         var doc = XDocument.Parse(pageSource);
         var rows = new List<CategoryRow>();
+        var seen = new HashSet<XElement>();
 
-        foreach (var n in doc.Descendants("node"))
+        // Hỗ trợ CẢ HAI định dạng XML: `uiautomator dump` (<node class="...">) và page source của Appium
+        // (thẻ đặt tên theo class: <android.widget.TextView ...>) — nên duyệt mọi phần tử, không lọc theo tên thẻ.
+        // Mỗi dòng = phần tử clickable GẦN NHẤT bao quanh tên nhóm (hoặc chữ "SHOW MORE…").
+        foreach (var n in doc.Descendants())
         {
-            if ((string?)n.Attribute("clickable") != "true" ||
-                (string?)n.Attribute("class") != "android.widget.RelativeLayout") continue;
+            var id = (string?)n.Attribute("resource-id");
+            var text = (string?)n.Attribute("text") ?? "";
+            var isName = id == nameId;
+            var isShowMore = !isName && text.StartsWith(showMorePrefix, StringComparison.OrdinalIgnoreCase);
+            if (!isName && !isShowMore) continue;
 
-            var bounds = Rect.Parse((string?)n.Attribute("bounds"));
+            var row = n.AncestorsAndSelf().FirstOrDefault(a => (string?)a.Attribute("clickable") == "true");
+            if (row is null || !seen.Add(row)) continue;
+
+            var bounds = Rect.Parse((string?)row.Attribute("bounds"));
             if (bounds.Height < minRowHeight) continue;
 
-            var descendants = n.Descendants("node").ToList();
-            var name = descendants.FirstOrDefault(d => (string?)d.Attribute("resource-id") == nameId)?.Attribute("text")?.Value;
-            if (name is not null)
+            if (isShowMore)
             {
-                var isChild = descendants.Any(d => (string?)d.Attribute("resource-id") == childIndicatorId);
-                rows.Add(new CategoryRow(name, isChild, false, bounds));
+                rows.Add(new CategoryRow("", true, true, bounds));
                 continue;
             }
 
-            var showMore = descendants.Any(d =>
-                ((string?)d.Attribute("text") ?? "").StartsWith(showMorePrefix, StringComparison.OrdinalIgnoreCase));
-            if (showMore) rows.Add(new CategoryRow("", true, true, bounds));
+            var isChild = row.Descendants().Any(d => (string?)d.Attribute("resource-id") == childIndicatorId);
+            rows.Add(new CategoryRow(text, isChild, false, bounds));
         }
 
         return rows;

@@ -70,6 +70,15 @@ public sealed partial class SetupViewModel : ObservableObject
 
     [ObservableProperty] private string _defaultWallet = "";
 
+    /// <summary>Ví cho sao kê thẻ tín dụng; trống = dùng ví mặc định.</summary>
+    [ObservableProperty] private string _creditCardWallet = "";
+
+    /// <summary>Ví cho bảng giao dịch BIDV; trống = dùng ví mặc định.</summary>
+    [ObservableProperty] private string _bidvWallet = "";
+
+    /// <summary>Ví mặc định trên màn Nhập tay; trống = dùng ví mặc định.</summary>
+    [ObservableProperty] private string _manualWallet = "";
+
     /// <summary>Danh sách ví, mỗi dòng một ví.</summary>
     [ObservableProperty] private string _walletsText = "";
 
@@ -100,6 +109,9 @@ public sealed partial class SetupViewModel : ObservableObject
     partial void OnExpenseCategoriesTextChanged(string value) => OnCategoryListsChanged();
     partial void OnIncomeCategoriesTextChanged(string value) => OnCategoryListsChanged();
     partial void OnDefaultWalletChanged(string value) => MarkDirty();
+    partial void OnCreditCardWalletChanged(string value) => MarkDirty();
+    partial void OnBidvWalletChanged(string value) => MarkDirty();
+    partial void OnManualWalletChanged(string value) => MarkDirty();
     partial void OnDefaultExpenseCategoryChanged(string value) => MarkDirty();
     partial void OnDefaultIncomeCategoryChanged(string value) => MarkDirty();
 
@@ -271,6 +283,9 @@ public sealed partial class SetupViewModel : ObservableObject
             var s = SettingsFile.Clone(source);
             IsFirstRun = !s.SetupCompleted;
             DefaultWallet = s.Defaults.Wallet;
+            CreditCardWallet = s.Defaults.CreditCardWallet;
+            BidvWallet = s.Defaults.BidvWallet;
+            ManualWallet = s.Defaults.ManualWallet;
             WalletsText = string.Join(Environment.NewLine, s.KnownWallets);
             ExpenseCategoriesText = CategoryTree.Format(s.GetCategoryTree(TransactionType.Chi));
             IncomeCategoriesText = CategoryTree.Format(s.GetCategoryTree(TransactionType.Thu));
@@ -294,6 +309,9 @@ public sealed partial class SetupViewModel : ObservableObject
     {
         var s = SettingsFile.Clone(_settings.CurrentValue);
         s.Defaults.Wallet = DefaultWallet.Trim();
+        s.Defaults.CreditCardWallet = CreditCardWallet.Trim();
+        s.Defaults.BidvWallet = BidvWallet.Trim();
+        s.Defaults.ManualWallet = ManualWallet.Trim();
         s.KnownWallets = KnownWallets.ToList();
         s.Defaults.ExpenseCategory = DefaultExpenseCategory.Trim();
         s.Defaults.IncomeCategory = DefaultIncomeCategory.Trim();

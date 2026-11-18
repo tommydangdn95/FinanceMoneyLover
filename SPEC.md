@@ -244,6 +244,27 @@ Lỗi (chặn nhập) gồm: thiếu cột bắt buộc (lỗi cả file), `Mã 
 
 Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dòng Excel và lý do, và **không được chọn để nhập**. Nút "Bắt đầu nhập" chỉ tính các dòng hợp lệ. Lỗi "Chưa phân loại" sẽ hết khi người dùng chọn nhóm cho dòng đó.
 
+### 6.5 Sao kê thẻ tín dụng ("Lịch sử giao dịch thẻ tín dụng")
+
+`StatementReader` tự nhận dạng loại file: có dòng tiêu đề đủ `Ngày giao dịch`, `Mô tả giao dịch`, `Ghi nợ`, `Ghi có` thì là sao kê thẻ (`CreditCardStatementReader`), còn lại là sao kê tài khoản (6.1–6.4).
+
+- Metadata: `Thời gian liệt kê giao dịch` và `Số thẻ:` (ngân hàng đã che sẵn dạng `411111xxxxxx9999`). Nhãn ở một ô, giá trị là ô có dữ liệu đầu tiên bên phải.
+- Cột: `Ngày giao dịch` | `Ngày cập nhật` | `Số tiền giao dịch` | `Ghi nợ` | `Ghi có` | `Mô tả giao dịch`. Không có giờ, Mã giao dịch, Tài khoản đối ứng hay Số dư. Các dòng **không** theo thứ tự ngày.
+- Ngày lấy theo `Ngày giao dịch` (trống thì `Ngày cập nhật`). `Ghi nợ` > 0 là Chi (tiêu bằng thẻ), `Ghi có` > 0 là Thu (trả nợ thẻ, hoàn phí). `Số tiền giao dịch` chỉ để tham khảo.
+- **Khóa chống trùng tự tạo:** `TTD-yyyyMMdd-N|C<số tiền>-<8 hex SHA-256 của mô tả đã chuẩn hóa>`. Ổn định giữa các kỳ sao kê chồng lấn; không chứa nguyên văn mô tả. Hai dòng giống hệt nhau trong file → cảnh báo, dòng sau nhận `#2` (như 6.4).
+- **Ví:** `Wallets[số thẻ]` nếu có, rồi `Defaults.CreditCardWallet` (màn Thiết lập: "Ví cho sao kê thẻ tín dụng"), rồi `Defaults.Wallet`.
+
+### 6.6 Bảng giao dịch BIDV
+
+`StatementReader` nhận dạng khi dòng tiêu đề có đủ `Ngày giao dịch`, `Nội dung giao dịch`, `Số tiền`, `Mã giao dịch` (`BidvStatementReader`). Thứ tự thử: thẻ tín dụng (6.5) → BIDV → sao kê tài khoản.
+
+- Tiêu đề thường ở dòng 1, **không có metadata** (không có số tài khoản, không có kỳ). Mới nhất ở trên.
+- Cột: `Ngày giao dịch` | `Nội dung giao dịch` | `Số tiền` | `Số dư` | `Tiền tệ` | `Mã giao dịch`. **`Số dư` không bao giờ được đọc.**
+- `Số tiền` **có dấu**: âm = Chi, dương = Thu, bằng 0 = lỗi. Chấp nhận ô số hoặc text (`-571,276`); số lẻ thập phân là lỗi.
+- `Tiền tệ` khác `VND` (nếu có) là lỗi dòng.
+- `Mã giao dịch` có thể **trùng** giữa các dòng khác số tiền (giao dịch thẻ). Xử lý như 6.4: cảnh báo, dòng sau nhận `MÃ#2`.
+- **Ví:** `Defaults.BidvWallet` (màn Thiết lập: "Ví cho bảng giao dịch BIDV"), trống thì `Defaults.Wallet`.
+
 ## 7. Cấu hình — `appsettings.json`
 
 ### 7.1 Tổng thể
@@ -269,6 +290,9 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
   },
   "Defaults": {
     "Wallet": "TP Bank",                // ví trong Money Lover tương ứng với tài khoản sao kê (khớp chính xác)
+    "CreditCardWallet": "",             // ví cho sao kê thẻ tín dụng (SPEC 6.5); trống = dùng Wallet
+    "BidvWallet": "",                   // ví cho bảng giao dịch BIDV (SPEC 6.6); trống = dùng Wallet
+    "ManualWallet": "Cash",             // ví chọn sẵn trên màn Nhập tay (SPEC 10.9); trống = dùng Wallet
     "ExpenseCategory": "Other Expense", // trống = dòng không khớp luật là lỗi "Chưa phân loại"
     "IncomeCategory": "Other Income",
     "NoteTemplate": "{description}"     // placeholder: {description}, {counterpartName}, {txnCode}
@@ -491,6 +515,15 @@ Bảng các dòng trong `state.json`, có lọc theo trạng thái, nút xóa tr
 
 ### 10.7 Cài đặt
 Form cho `Tools`, `Appium`, `Timing`, `Wallets` (ánh xạ số tài khoản → ví), `Defaults.NoteTemplate`. Ví, nhóm và luật nằm ở trang Thiết lập (10.5). Có các nút "Mở file cấu hình", "Tải lại cấu hình", "Mở thư mục dữ liệu".
+
+### 10.9 Nhập tay (giao dịch không có trong sao kê, VD tiền mặt)
+
+Trang "Nhập tay" (`ManualEntryViewModel`, `Core/Manual`):
+- **Form thêm nhanh:** Ngày (mặc định hôm nay), Loại, Số tiền, Nhóm (`SearchComboBox`), Ví (mặc định `Defaults.ManualWallet`, thường là "Cash"; trống thì `Defaults.Wallet`), Ghi chú. Enter ở ô Số tiền/Ghi chú = Thêm. Thêm xong giữ ngày/loại/nhóm/ví, xóa số tiền/ghi chú, con trỏ về ô Số tiền.
+- Số tiền gõ được `45000`, `45.000`, `45,000`, `45k`, `1.5tr` (`AmountParser`). Không cho ngày tương lai, số tiền ≤ 0, nhóm không có trong danh sách, thiếu ví.
+- **Lưu:** `manual.json` ở thư mục dữ liệu, ghi atomic sau mỗi thay đổi. Mỗi giao dịch có `Id` = `TAY-yyyyMMddHHmmss-<12 hex>`, không đổi; trạng thái đã nhập/lỗi nằm ở `state.json` theo Id, như sao kê.
+- **Lưới:** sửa được mọi cột khi chưa nhập; dòng đã nhập bị khóa. Xóa từng dòng (dòng chưa nhập thì hỏi). "Dọn dòng đã nhập" bỏ các dòng đã nhập khỏi danh sách (không ảnh hưởng Money Lover/state).
+- **Chạy thử / Bắt đầu nhập:** chuyển `TransactionRow` (`ManualEntry.ToTransactionRow`) sang trang Chạy, dùng chung `ImportRunner`; `SourceFile` = "Nhập tay". Chạy xong trang tự đọc lại trạng thái.
 
 ### 10.8 Yêu cầu chung
 - **Không chặn UI thread:** mọi việc đọc file, gọi `adb`, gọi Appium đều chạy `async`.

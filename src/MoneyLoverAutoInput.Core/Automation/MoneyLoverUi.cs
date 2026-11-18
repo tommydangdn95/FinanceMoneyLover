@@ -239,6 +239,14 @@ public sealed class MoneyLoverUi : IMoneyLoverUi
         var (parent, child) = CategoryTree.Split(path);
         var leaf = child ?? parent;
 
+        // Money Lover nhớ và CHỌN SẴN nhóm dùng lần trước. Nếu đúng nhóm cần nhập thì không mở màn chọn nhóm.
+        // Màn chỉ hiện tên lá, nên chỉ bỏ qua khi tên lá không trùng với nhóm khác cùng loại (VD "Fitness" trùng).
+        if (TryText("CategoryText") == leaf && IsUniqueLeaf(leaf, type))
+        {
+            _logger.LogInformation("Nhóm '{Path}' đã được chọn sẵn — bỏ qua bước chọn nhóm", path);
+            return;
+        }
+
         Tap("CategoryField");
         var list = Wait("CategoryList");
         var tab = type == TransactionType.Chi ? "CategoryTabExpense" : "CategoryTabIncome";
@@ -251,6 +259,7 @@ public sealed class MoneyLoverUi : IMoneyLoverUi
         var childId = _sel.Value("CategoryChildIndicator");
         var insideParent = false;
         var expansions = 0;
+        var atEnd = false; // scrollGesture trả false = đã cuộn và giờ đang ở cuối → vẫn phải đọc trang cuối này
 
         for (var page = 0; page < 80; page++)
         {
@@ -271,22 +280,46 @@ public sealed class MoneyLoverUi : IMoneyLoverUi
                     continue;
 
                 case CategorySearchStep.NotFound nf:
+                    SaveDiagnostic("category_notfound");
                     Back();
                     throw new DataNotFoundException(nf.Reason);
 
                 case CategorySearchStep.ScrollDown s:
                     insideParent = s.InsideParent;
-                    if (!ScrollList(Wait("CategoryList"), "down", 0.6))
+                    if (atEnd)
                     {
+                        SaveDiagnostic("category_notfound");
                         Back();
                         throw new DataNotFoundException($"Không có nhóm '{path}' trong Money Lover.");
                     }
+                    atEnd = !ScrollList(Wait("CategoryList"), "down", 0.6);
                     Thread.Sleep(400);
                     continue;
             }
         }
         Back();
         throw new UiStepException($"Cuộn quá lâu mà không thấy nhóm '{path}'.");
+    }
+
+    private bool IsUniqueLeaf(string leaf, TransactionType type) =>
+        _settings.GetKnownCategories(type).Count(p => CategoryTree.LeafName(p) == leaf) <= 1;
+
+    /// <summary>Lưu ảnh + page source của màn ĐANG hiện (trước khi Back) để chẩn đoán selector.</summary>
+    private void SaveDiagnostic(string tag)
+    {
+        try
+        {
+            var dir = Path.Combine(_dataRoot, "screenshots");
+            Directory.CreateDirectory(dir);
+            var name = $"{tag}_{DateTime.Now:yyyyMMdd_HHmmss}";
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), _driver.GetScreenshot().AsByteArray);
+            File.WriteAllText(Path.Combine(dir, name + ".xml"), _driver.PageSource);
+            _logger.LogWarning("Đã lưu màn hình chẩn đoán: screenshots\\{Name}.xml", name);
+        }
+        catch (Exception ex) when (ex is WebDriverException or IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Không lưu được màn hình chẩn đoán");
+        }
     }
 
     /// <summary>Ngày hiển thị "Sunday, 15/11/2026" → bấm lùi/tiến 1 ngày tới đúng ngày.</summary>
@@ -329,7 +362,28 @@ public sealed class MoneyLoverUi : IMoneyLoverUi
 
     // ================= Tiện ích =================
 
-    private Task Run(Action action) => Task.Run(() => Guard(action));
+    /// <summary>
+    /// Chạy lệnh Appium (đồng bộ) trên thread pool. Exception được BẮT TRONG Task.Run rồi ném lại ở phía async:
+    /// nếu để exception thoát khỏi delegate của Task.Run, Visual Studio (Just My Code) coi là "user-unhandled"
+    /// và dừng app dù runner vẫn bắt được bình thường.
+    /// </summary>
+    private async Task Run(Action action)
+    {
+        var error = await Task.Run(() =>
+        {
+            try
+            {
+                Guard(action);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }).ConfigureAwait(false);
+
+        if (error is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+    }
 
     /// <summary>Đổi lỗi WebDriver thành loại lỗi của SPEC 11.</summary>
     private static void Guard(Action action)

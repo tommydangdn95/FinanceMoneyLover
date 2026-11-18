@@ -26,7 +26,9 @@ public static class RowValidator
             {
                 var row = ordered[i];
                 if (i > 0) row.Id = row.TxnCode + DuplicateKeySeparator + (i + 1);
-                row.Warnings.Add($"Mã giao dịch {row.TxnCode} bị trùng trong file (dòng {lines}) — kiểm tra kỹ để tránh nhập 2 lần.");
+                row.Warnings.Add(row.TxnCode.StartsWith(CreditCardStatementReader.KeyPrefix, StringComparison.Ordinal)
+                    ? $"Có giao dịch giống hệt (cùng ngày, số tiền, mô tả) ở dòng {lines} — kiểm tra kỹ để tránh nhập 2 lần."
+                    : $"Mã giao dịch {row.TxnCode} bị trùng trong file (dòng {lines}) — kiểm tra kỹ để tránh nhập 2 lần.");
             }
         }
     }

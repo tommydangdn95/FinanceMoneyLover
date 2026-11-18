@@ -62,6 +62,15 @@ public sealed class TimingOptions
 public sealed class DefaultsOptions
 {
     public string Wallet { get; set; } = "";
+
+    /// <summary>Ví cho sao kê thẻ tín dụng. Trống = dùng <see cref="Wallet"/>.</summary>
+    public string CreditCardWallet { get; set; } = "";
+
+    /// <summary>Ví cho bảng giao dịch BIDV (file không có số tài khoản). Trống = dùng <see cref="Wallet"/>.</summary>
+    public string BidvWallet { get; set; } = "";
+
+    /// <summary>Ví mặc định cho giao dịch trên màn "Nhập tay" (VD "Cash"). Trống = dùng <see cref="Wallet"/>.</summary>
+    public string ManualWallet { get; set; } = "";
     public string ExpenseCategory { get; set; } = "";
     public string IncomeCategory { get; set; } = "";
 

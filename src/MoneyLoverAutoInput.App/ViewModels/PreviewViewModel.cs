@@ -197,7 +197,12 @@ public sealed partial class PreviewViewModel : ObservableObject, IDisposable
             _lastRead = read;
             FilePath = path;
             OnPropertyChanged(nameof(FileName));
-            AccountMasked = loaded.Info.MaskedAccount;
+            AccountMasked = loaded.Info.Kind switch
+            {
+                StatementKind.CreditCard => "Thẻ tín dụng: " + loaded.Info.MaskedAccount,
+                StatementKind.Bidv => "Bảng giao dịch BIDV",
+                _ => "Tài khoản: " + loaded.Info.MaskedAccount,
+            };
             Period = loaded.Info.Period;
             Apply(loaded, settings);
 

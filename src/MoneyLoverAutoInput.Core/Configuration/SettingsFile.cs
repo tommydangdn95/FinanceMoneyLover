@@ -54,6 +54,13 @@ public static class SettingsFile
         else if (s.KnownWallets.Count > 0 && !s.KnownWallets.Contains(s.Defaults.Wallet.Trim()))
             v.Warnings.Add($"Ví mặc định '{s.Defaults.Wallet}' không có trong danh sách ví.");
 
+        foreach (var (label, wallet) in new[] { ("thẻ tín dụng", s.Defaults.CreditCardWallet), ("BIDV", s.Defaults.BidvWallet), ("nhập tay", s.Defaults.ManualWallet) })
+        {
+            var w = wallet.Trim();
+            if (w.Length > 0 && s.KnownWallets.Count > 0 && !s.KnownWallets.Contains(w))
+                v.Warnings.Add($"Ví {label} '{w}' không có trong danh sách ví.");
+        }
+
         foreach (var dup in s.KnownWallets.GroupBy(w => w.Trim(), StringComparer.CurrentCultureIgnoreCase)
                      .Where(g => g.Count() > 1).Select(g => g.Key))
         {

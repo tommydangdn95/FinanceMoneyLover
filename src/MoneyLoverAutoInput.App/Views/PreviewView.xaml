@@ -49,7 +49,7 @@
                     <ui:SymbolIcon Symbol="DocumentTable24" Margin="0,0,6,0" />
                     <TextBlock Style="{StaticResource SecondaryText}" Text="{Binding FileName}" />
                     <TextBlock Style="{StaticResource SecondaryText}" Margin="16,0,0,0"
-                               Text="{Binding AccountMasked, StringFormat='Tài khoản: {0}'}" />
+                               Text="{Binding AccountMasked}" />
                     <TextBlock Style="{StaticResource SecondaryText}" Margin="16,0,0,0"
                                Text="{Binding Period, StringFormat='Kỳ: {0}'}" />
                 </StackPanel>

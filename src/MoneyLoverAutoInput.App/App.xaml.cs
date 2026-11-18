@@ -11,6 +11,7 @@ using MoneyLoverAutoInput.Core.Configuration;
 using MoneyLoverAutoInput.Core.Drafts;
 using MoneyLoverAutoInput.Core.Tools;
 using MoneyLoverAutoInput.Core.Input;
+using MoneyLoverAutoInput.Core.Manual;
 using MoneyLoverAutoInput.Core.State;
 using Serilog;
 
@@ -107,13 +108,15 @@ public partial class App : Application
         services.AddSingleton(paths);
         services.AddSingleton(_ => StateStore.Load(paths.StateFile));
         services.AddSingleton(_ => DraftStore.Load(paths.DraftsFile));
-        services.AddSingleton<IStatementReader, BankStatementReader>();
+        services.AddSingleton(_ => ManualEntryStore.Load(paths.ManualFile));
+        services.AddSingleton<IStatementReader, StatementReader>();
 
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IShellService, ShellService>();
 
         services.AddSingleton<PreviewViewModel>();
+        services.AddSingleton<ManualEntryViewModel>();
         services.AddSingleton<AppiumServerManager>(); // Dispose khi thoát app → tắt Appium nếu app đã bật
         services.AddSingleton<EnvironmentViewModel>();
         services.AddSingleton<RunViewModel>();

@@ -18,7 +18,13 @@ Hướng dẫn cho Claude Code khi làm việc trong repo này. **Đặc tả đ
   - **Môi trường** (`Core/Tools`: `AdbClient`, `AppiumServerManager`, `EnvironmentChecker`). Namespace là `Core.Tools`, **không** đặt `Core.Environment` vì sẽ che mất `System.Environment`.
   - **Chạy** (`Core/Automation/MoneyLoverUi` theo SPEC 8.2, `Core/Import/ImportRunner`). Nút "Chạy thử" và "Bắt đầu nhập" đã bật.
     - Logic thuần đã có test: `CategoryListParser`/`CategorySearch` (đọc màn chọn nhóm, "SHOW MORE…"), parse số tiền và ngày, và runner (dùng `IMoneyLoverUi` giả).
-    - **CHƯA chạy trên điện thoại thật.** Lần chạy thử đầu do người dùng tự bấm. `DiscardConfirm` (`android:id/button1`) chưa được xác minh.
+    - Đã chạy thử trên máy thật một lần. Lỗi phát hiện được: **page source của Appium khác `uiautomator dump`**. Appium đặt tên thẻ theo class (`<android.widget.TextView ...>`), còn dump dùng `<node class=...>`. Code đọc XML phải duyệt mọi phần tử (`Descendants()`), không lọc theo tên thẻ, và test phải có cả hai định dạng.
+    - Money Lover **chọn sẵn nhóm dùng lần trước**, và màn chọn nhóm tự cuộn tới dòng đó (dòng có thêm `@select_indicator`).
+    - `scrollGesture` trả `false` nghĩa là **đã cuộn và giờ đang ở cuối**, nên vẫn phải đọc trang cuối đó.
+    - Exception ném trong `Task.Run` làm VS (Just My Code) dừng app với lỗi "user-unhandled". `MoneyLoverUi.Run` bắt exception bên trong rồi ném lại ở phía async.
+    - `DiscardConfirm` (`android:id/button1`) chưa được xác minh.
+
+  - **Nhập tay** (SPEC 10.9, `Core/Manual`: `ManualEntry`, `ManualEntryStore` → `manual.json`, `AmountParser`): form thêm nhanh + lưới sửa được, nhập qua cùng `ImportRunner`. Ví chọn sẵn từ `Defaults.ManualWallet` ("Cash").
 
 **Chưa làm:**
 1. Trang Lịch sử.
@@ -60,6 +66,12 @@ Dữ liệu runtime khi chạy thử nằm ở `%LOCALAPPDATA%\MoneyLoverAutoInp
 - **DataGrid ở theme tối:** WPF mặc định tô nền dòng bằng `SystemColors.Window` (trắng), và WPF-UI không ghi đè màu này. `App.xaml` có style toàn cục cho DataGrid/Row/Cell dùng màu theo theme.
   - Style kế thừa phải dùng `BasedOn="{StaticResource DefaultDataGridStyle}"` (tương tự `DefaultDataGridRowStyle`, `DefaultDataGridCellStyle`). **Không dùng** `{x:Type DataGrid}`, vì nó rơi về style của Windows và làm mất tiêu đề cột tối.
   - Control WPF-UI đặt trong ô (ComboBox, DatePicker) cần `MinWidth="0" Padding="8,4"`, không thì chữ bị che trong cột hẹp.
+  - **`ListView` của WPF** cũng tô chữ màu hệ thống (đen) ở theme tối. Danh sách chỉ để hiển thị thì dùng `ItemsControl` với `TextElement.Foreground`.
+  - **WPF-UI 4.3 KHÔNG có style `ListViewItem`**, nên `BasedOn="{StaticResource {x:Type ListViewItem}}"` gây `XamlParseException` lúc **mở trang**, còn build vẫn qua. Chỉ dùng các khóa có thật, như `DefaultDataGridStyle` hay `DefaultListBoxItemStyle`.
+- **Lỗi XAML (StaticResource sai khóa...) build không bắt được.** Sau khi sửa XAML, chạy kiểm tra nạp View không hiện cửa sổ:
+  1. Tạo một project console `net8.0-windows` (`UseWPF`), tham chiếu các DLL đã build của App.
+  2. Trên thread STA: `new App().InitializeComponent()`, rồi `new XxxView()` cùng `Measure`/`Arrange` cho từng View.
+  3. Bắt exception và in ra View nào lỗi.
 - **Ô chọn có danh sách** (nhóm, ví): dùng `Controls/SearchComboBox` (`ItemsSource` + `Value`). Đây là TextBox kèm Popup, tìm theo "chứa", không phân biệt dấu (`TextNormalizer.ContainsNormalized`).
   - **Không dùng ComboBox editable** cho mục đích này. TextSearch mặc định chỉ khớp tiền tố, nên gõ "petrol" không ra "Transportation > Petrol". Còn nếu lọc danh sách của chính ComboBox thì nó tự đặt lại Text theo mục đang chọn, làm chữ đang gõ bị xóa (người dùng báo là không gõ được).
 - **Kiểm tra giao diện bằng ảnh chụp thật** — CHỈ chụp cửa sổ app (`PrintWindow` theo handle), **không bao giờ chụp toàn màn hình** (`CopyFromScreen`), vì sẽ dính các cửa sổ riêng tư khác của người dùng. Không giành focus hay điều khiển màn hình của người dùng khi chưa được đồng ý. (Win32 `PrintWindow` với cờ `PW_RENDERFULLCONTENT`, rồi xem ảnh PNG). UI Automation chỉ đọc cây control nên không phát hiện được lỗi màu hay bố cục: lưới trắng xóa trước đây vẫn "đọc" ra đủ dữ liệu.
@@ -94,6 +106,9 @@ Dữ liệu runtime khi chạy thử nằm ở `%LOCALAPPDATA%\MoneyLoverAutoInp
 
 - Có 1 sheet. Metadata nằm ở trên (`Thời gian:`, `Tài khoản giao dịch:` ở cột A/B), tiêu đề bảng ở **dòng 9**, dữ liệu từ dòng 10, **mới nhất ở trên**.
 - Cột: `Ngày thực hiện` | `Ngày hiệu lực` | `Mô tả giao dịch` | `Ghi nợ` | `Ghi có` | `Số dư` | `Tài khoản đối ứng` | `Tên tài khoản` | `Mã giao dịch`.
+- **Sao kê thẻ tín dụng** (SPEC 6.5) cũng được hỗ trợ: `StatementReader` (đăng ký trong DI) tự nhận dạng theo tiêu đề rồi gọi `BankStatementReader` hoặc `CreditCardStatementReader`. File thẻ không có mã giao dịch, nên khóa được tự tạo (`TTD-...`, `CreditCardStatementReader.BuildKey`). Ví lấy từ `Defaults.CreditCardWallet`.
+- **Bảng giao dịch BIDV** (SPEC 6.6, `BidvStatementReader`): tiêu đề ở dòng 1, `Số tiền` có dấu (âm = Chi), không có số TK nên ví lấy từ `Defaults.BidvWallet`. Không đọc cột `Số dư`.
+- Thêm định dạng mới: viết reader tĩnh có `LooksLike`/`ReadWorksheet` (dùng `HeaderFinder`), thêm `StatementKind`, rồi thêm vào chuỗi nhận dạng trong `StatementReader`.
 - Những chỗ dễ sai:
   - Ngày là **chuỗi text** (`dd-MM-yyyy HH:mm:ss` và `dd/MM/yyyy`), không phải kiểu Date.
   - Ô trống là chuỗi rỗng `''`, không phải null.
@@ -118,7 +133,7 @@ Dữ liệu runtime khi chạy thử nằm ở `%LOCALAPPDATA%\MoneyLoverAutoInp
 - File sao kê thật (`Account Enquiry-*.xlsx`) chứa số tài khoản, số điện thoại, tên đối tác và số dư. **Không** copy vào `samples/` hay `tests/`, không đưa vào commit, không dán nguyên nội dung vào output.
 - File mẫu cho test phải **tự tạo và ẩn danh** (số TK, SĐT, mã GD đều giả), giữ đúng bố cục và kiểu ô của file thật.
 - Trên UI, log và state phải che số tài khoản (chỉ giữ 4 số cuối). **Không hiển thị và không log số dư.**
-- `.gitignore` phải có: `Account Enquiry-*.xlsx`, `state.json`, `logs/`, `screenshots/`, `bin/`, `obj/`, `*.user`, `.vs/`.
+- `.gitignore` phải có: `Account Enquiry-*.xlsx`, `state.json`, `drafts.json`, `manual.json`, `logs/`, `screenshots/`, `bin/`, `obj/`, `*.user`, `.vs/`.
 
 ## Lưu ý thiết bị
 

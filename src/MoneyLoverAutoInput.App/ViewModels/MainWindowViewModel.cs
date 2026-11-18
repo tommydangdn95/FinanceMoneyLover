@@ -26,6 +26,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IDialogService _dialogs;
 
     public PreviewViewModel Preview { get; }
+    public ManualEntryViewModel Manual { get; }
     public SetupViewModel Setup { get; }
     public EnvironmentViewModel Environment { get; }
     public RunViewModel Run { get; }
@@ -33,10 +34,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private NavItem _selectedNav;
 
-    public MainWindowViewModel(PreviewViewModel preview, SetupViewModel setup, EnvironmentViewModel environment,
+    public MainWindowViewModel(PreviewViewModel preview, ManualEntryViewModel manual, SetupViewModel setup, EnvironmentViewModel environment,
         RunViewModel run, SettingsViewModel settings, IOptionsMonitor<AppSettings> appSettings, IDialogService dialogs)
     {
         Preview = preview;
+        Manual = manual;
         Setup = setup;
         Environment = environment;
         Run = run;
@@ -49,6 +51,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         NavItems = new[]
         {
             previewNav,
+            new NavItem("Nhập tay", SymbolRegular.Edit24, manual),
             setupNav,
             new NavItem("Môi trường", SymbolRegular.PhoneLaptop24, environment),
             runNav,
@@ -67,7 +70,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SelectedNav = runNav;
             await run.StartAsync(rows, dryRun, sourceFile);
         };
-        run.Finished += (_, _) => preview.RefreshAfterImport();
+        manual.ImportRequested += async (rows, dryRun, sourceFile) =>
+        {
+            SelectedNav = runNav;
+            await run.StartAsync(rows, dryRun, sourceFile);
+        };
+        run.Finished += (_, _) =>
+        {
+            preview.RefreshAfterImport();
+            manual.Refresh();
+        };
     }
 
     /// <summary>Kiểm tra môi trường nền khi mở app (SPEC 8.1 bước 1).</summary>
