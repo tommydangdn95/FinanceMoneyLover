@@ -76,7 +76,7 @@ public static class BidvStatementReader
         };
     }
 
-    /// <summary>Số tiền có dấu ("-16967", "700000", "-571,276"). null = trống hoặc lỗi.</summary>
+    /// <summary>Số tiền có dấu ("-45000", "120000", "-1,250,000"). null = trống hoặc lỗi.</summary>
     internal static long? ParseSignedAmount(IXLCell cell, List<string> errors)
     {
         var v = cell.Value;

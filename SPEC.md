@@ -260,7 +260,7 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
 
 - Tiêu đề thường ở dòng 1, **không có metadata** (không có số tài khoản, không có kỳ). Mới nhất ở trên.
 - Cột: `Ngày giao dịch` | `Nội dung giao dịch` | `Số tiền` | `Số dư` | `Tiền tệ` | `Mã giao dịch`. **`Số dư` không bao giờ được đọc.**
-- `Số tiền` **có dấu**: âm = Chi, dương = Thu, bằng 0 = lỗi. Chấp nhận ô số hoặc text (`-571,276`); số lẻ thập phân là lỗi.
+- `Số tiền` **có dấu**: âm = Chi, dương = Thu, bằng 0 = lỗi. Chấp nhận ô số hoặc text (`-45,000`); số lẻ thập phân là lỗi.
 - `Tiền tệ` khác `VND` (nếu có) là lỗi dòng.
 - `Mã giao dịch` có thể **trùng** giữa các dòng khác số tiền (giao dịch thẻ). Xử lý như 6.4: cảnh báo, dòng sau nhận `MÃ#2`.
 - **Ví:** `Defaults.BidvWallet` (màn Thiết lập: "Ví cho bảng giao dịch BIDV"), trống thì `Defaults.Wallet`.
