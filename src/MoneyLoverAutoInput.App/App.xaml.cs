@@ -8,6 +8,8 @@ using MoneyLoverAutoInput.App.ViewModels;
 using MoneyLoverAutoInput.App.Views;
 using MoneyLoverAutoInput.Core;
 using MoneyLoverAutoInput.Core.Configuration;
+using MoneyLoverAutoInput.Core.Drafts;
+using MoneyLoverAutoInput.Core.Tools;
 using MoneyLoverAutoInput.Core.Input;
 using MoneyLoverAutoInput.Core.State;
 using Serilog;
@@ -20,6 +22,19 @@ public partial class App : Application
 
     private Mutex? _singleInstance;
     private IHost? _host;
+
+    public App()
+    {
+        // Ngày/số trên UI theo kiểu Việt Nam (DatePicker hiện dd/MM/yyyy) bất kể ngôn ngữ Windows.
+        // Phải đặt ở constructor (đồng bộ): đặt trong OnStartup async thì culture không còn hiệu lực sau await.
+        var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = vi;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = vi;
+        Thread.CurrentThread.CurrentCulture = vi;
+        Thread.CurrentThread.CurrentUICulture = vi;
+        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(System.Windows.Markup.XmlLanguage.GetLanguage(vi.IetfLanguageTag)));
+    }
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -42,13 +57,15 @@ public partial class App : Application
             paths.EnsureCreated();
             UserConfig.EnsureExists(paths);
             ConfigureLogging(paths);
+            BindingErrorListener.Register();
             RegisterGlobalExceptionHandlers();
 
             _host = BuildHost(paths);
             await _host.StartAsync();
 
-            // Resolve sớm để lỗi state.json/config hiện ngay lúc mở app.
+            // Resolve sớm để lỗi state.json/drafts.json/config hiện ngay lúc mở app.
             _host.Services.GetRequiredService<StateStore>();
+            _host.Services.GetRequiredService<DraftStore>();
 
             var window = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = window;
@@ -89,6 +106,7 @@ public partial class App : Application
 
         services.AddSingleton(paths);
         services.AddSingleton(_ => StateStore.Load(paths.StateFile));
+        services.AddSingleton(_ => DraftStore.Load(paths.DraftsFile));
         services.AddSingleton<IStatementReader, BankStatementReader>();
 
         services.AddSingleton<IDialogService, DialogService>();
@@ -96,6 +114,9 @@ public partial class App : Application
         services.AddSingleton<IShellService, ShellService>();
 
         services.AddSingleton<PreviewViewModel>();
+        services.AddSingleton<AppiumServerManager>(); // Dispose khi thoát app → tắt Appium nếu app đã bật
+        services.AddSingleton<EnvironmentViewModel>();
+        services.AddSingleton<RunViewModel>();
         services.AddSingleton<SetupViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainWindowViewModel>();

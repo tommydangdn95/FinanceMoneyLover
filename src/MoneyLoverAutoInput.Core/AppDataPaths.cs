@@ -8,6 +8,7 @@ public sealed class AppDataPaths
     public string Root { get; }
     public string ConfigFile => Path.Combine(Root, "appsettings.json");
     public string StateFile => Path.Combine(Root, "state.json");
+    public string DraftsFile => Path.Combine(Root, "drafts.json");
     public string LogsDir => Path.Combine(Root, "logs");
     public string ScreenshotsDir => Path.Combine(Root, "screenshots");
 

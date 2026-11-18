@@ -1,0 +1,108 @@
+<UserControl x:Class="MoneyLoverAutoInput.App.Views.RunView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:MoneyLoverAutoInput.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:RunViewModel}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+
+    <Grid Margin="8,8,16,8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="180" />
+        </Grid.RowDefinitions>
+
+        <!-- Tiêu đề + nút -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <ui:TextBlock FontTypography="Title" Text="{Binding Title}" />
+                <TextBlock Margin="0,4,0,0" Text="{Binding Summary}" TextWrapping="Wrap" FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <ui:Button Content="Thư mục ảnh lỗi" Margin="0,0,8,0" Icon="{ui:SymbolIcon FolderOpen24}"
+                           Command="{Binding OpenScreenshotsFolderCommand}" />
+                <ui:Button Appearance="Danger" Content="Dừng" Icon="{ui:SymbolIcon Stop24}"
+                           Command="{Binding StopCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Tiến trình -->
+        <ui:Card Grid.Row="1" Margin="0,12,0,8">
+            <StackPanel>
+                <TextBlock Text="{Binding CurrentRow}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <ProgressBar Margin="0,8,0,8" Height="6" Minimum="0" Maximum="{Binding Total}" Value="{Binding Current}" />
+                <StackPanel Orientation="Horizontal">
+                    <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Margin="0,0,8,0"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{Binding CurrentStep}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}"
+                           Text="Đang điều khiển điện thoại — đừng chạm vào điện thoại cho tới khi xong." />
+            </StackPanel>
+        </ui:Card>
+
+        <!-- Kết quả từng dòng -->
+        <ListView Grid.Row="2" ItemsSource="{Binding Results}" Background="Transparent" BorderThickness="0">
+            <ListView.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:RunResultItem}">
+                    <Grid Margin="4,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="28" />
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Icon}" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOk}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Text="{Binding Index, StringFormat='#{0}'}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding OutcomeText}" FontWeight="SemiBold" />
+                        <StackPanel Grid.Column="3">
+                            <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text}" />
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="4" Appearance="Transparent" Content="Xem ảnh lỗi"
+                                   Visibility="{Binding HasScreenshot, Converter={StaticResource BoolToVisibility}}"
+                                   Command="{Binding DataContext.OpenScreenshotCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   CommandParameter="{Binding}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Log -->
+        <Border Grid.Row="4" CornerRadius="6" Padding="8"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+            <ListBox x:Name="LogList" ItemsSource="{Binding Log}" Background="Transparent" BorderThickness="0"
+                     FontFamily="Consolas, Segoe UI" FontSize="12"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+        </Border>
+    </Grid>
+</UserControl>

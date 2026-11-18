@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vm="clr-namespace:MoneyLoverAutoInput.App.ViewModels"
+             xmlns:c="clr-namespace:MoneyLoverAutoInput.App.Controls"
              xmlns:views="clr-namespace:MoneyLoverAutoInput.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:PreviewViewModel}"
@@ -80,12 +81,19 @@
             </Grid.ColumnDefinitions>
             <ComboBox Grid.Column="0" ItemsSource="{Binding FilterOptions}"
                       SelectedItem="{Binding SelectedFilter}" DisplayMemberPath="Label" />
-            <ui:TextBox Grid.Column="1" Margin="8,0,0,0" PlaceholderText="Tìm theo mô tả, ghi chú, nhóm, mã GD…"
+            <ui:TextBox Grid.Column="1" Margin="8,0,0,0" PlaceholderText="Tìm theo mô tả, ghi chú, nhóm, người nhận/gửi, mã GD…"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=200}" />
             <StackPanel Grid.Column="3" Orientation="Horizontal">
                 <ui:Button Content="Chọn tất cả" Appearance="Transparent" Command="{Binding SelectAllCommand}" />
                 <ui:Button Content="Bỏ chọn" Appearance="Transparent" Command="{Binding UnselectAllCommand}" />
+                <ui:Button Content="Xóa dòng đang chọn" Appearance="Transparent" Icon="{ui:SymbolIcon Delete24}"
+                           ToolTip="Xóa các dòng đang bôi đen trên lưới (Ctrl/Shift + click để chọn nhiều; hoặc phím Delete)"
+                           Command="{Binding DeleteRowsCommand}"
+                           CommandParameter="{Binding SelectedItems, ElementName=RowsGrid}" />
+                <ui:Button Content="Hoàn tác tất cả" Appearance="Transparent" Icon="{ui:SymbolIcon ArrowUndo24}"
+                           ToolTip="Bỏ mọi chỉnh sửa, khôi phục dòng đã xóa và lựa chọn trong file này"
+                           Command="{Binding ResetAllEditsCommand}" />
             </StackPanel>
         </Grid>
 
@@ -113,12 +121,18 @@
         </Border>
 
         <!-- Lưới giao dịch -->
-        <DataGrid Grid.Row="3" ItemsSource="{Binding RowsView}"
+        <!-- Chọn nhiều dòng: Ctrl/Shift + click (vào vùng trống của dòng, VD cột Trạng thái); phím Delete để xóa. -->
+        <DataGrid x:Name="RowsGrid" Grid.Row="3" ItemsSource="{Binding RowsView}"
                   Visibility="{Binding HasFile, Converter={StaticResource BoolToVisibility}}"
                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                   CanUserDeleteRows="False" CanUserReorderColumns="False"
-                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  SelectionMode="Extended" SelectionUnit="FullRow"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                   RowHeight="40" EnableRowVirtualization="True">
+            <DataGrid.InputBindings>
+                <KeyBinding Key="Delete" Command="{Binding DeleteRowsCommand}"
+                            CommandParameter="{Binding SelectedItems, ElementName=RowsGrid}" />
+            </DataGrid.InputBindings>
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                     <Style.Triggers>
@@ -130,39 +144,47 @@
             </DataGrid.RowStyle>
 
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="" Width="44">
+                <DataGridTemplateColumn Header="" Width="48">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <CheckBox HorizontalAlignment="Center" MinWidth="0"
+                            <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="0" Padding="0" Margin="8,0,0,0"
                                       IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
                                       IsEnabled="{Binding IsSelectable}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Ngày" Width="96" SortMemberPath="Model.SortKey">
+                <DataGridTemplateColumn Header="Ngày" Width="138" SortMemberPath="Model.SortKey">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Style="{StaticResource CellText}" Text="{Binding NgayText}" />
+                            <DatePicker Margin="2,0" VerticalAlignment="Center" MinWidth="0" Padding="8,4"
+                                        SelectedDate="{Binding NgayDate, UpdateSourceTrigger=PropertyChanged}"
+                                        SelectedDateFormat="Short" IsEnabled="{Binding IsEditable}"
+                                        ToolTip="{Binding OriginalSummary}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Loại" Width="56" SortMemberPath="Loai">
+                <DataGridTemplateColumn Header="Loại" Width="84" SortMemberPath="Loai">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Style="{StaticResource CellText}" Text="{Binding Loai}" />
+                            <ComboBox Margin="2,0" VerticalAlignment="Center" MinWidth="0" Padding="8,4"
+                                      ItemsSource="{x:Static vm:TransactionRowViewModel.TypeOptions}"
+                                      DisplayMemberPath="Label"
+                                      SelectedItem="{Binding LoaiOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding IsEditable}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Số tiền" Width="110" SortMemberPath="SoTien">
+                <DataGridTemplateColumn Header="Số tiền" Width="118" SortMemberPath="SoTien">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding SoTienText}" HorizontalAlignment="Right"
-                                       VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
+                            <TextBox Margin="2,0" VerticalAlignment="Center" TextAlignment="Right" FontWeight="SemiBold"
+                                     Text="{Binding SoTienText, UpdateSourceTrigger=LostFocus}"
+                                     IsReadOnly="{Binding IsLocked}" ToolTip="{Binding OriginalSummary}">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                                         <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsExpense}" Value="True">
@@ -170,52 +192,57 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                </TextBox.Style>
+                            </TextBox>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Nhóm" Width="170" SortMemberPath="Nhom">
+                <DataGridTemplateColumn Header="Nhóm" Width="2*" MinWidth="200" SortMemberPath="Nhom">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <ComboBox IsEditable="True" Margin="2,0" VerticalAlignment="Center"
-                                      ItemsSource="{Binding CategoryOptions}"
-                                      Text="{Binding Nhom, UpdateSourceTrigger=LostFocus}"
-                                      IsEnabled="{Binding IsSelectable}" />
+                            <c:SearchComboBox Margin="2,0" VerticalAlignment="Center"
+                                               ToolTip="{Binding MatchedRuleTooltip}"
+                                               ItemsSource="{Binding CategoryOptions}"
+                                               Value="{Binding Nhom, Mode=TwoWay}"
+                                               IsEnabled="{Binding IsEditable}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Ví" Width="130">
+                <DataGridTemplateColumn Header="Ví" Width="130" SortMemberPath="Wallet">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Style="{StaticResource CellText}" Text="{Binding Wallet}" />
+                            <c:SearchComboBox Margin="2,0" VerticalAlignment="Center"
+                                               ItemsSource="{Binding WalletOptions}"
+                                               Value="{Binding Wallet, Mode=TwoWay}"
+                                               IsEnabled="{Binding IsEditable}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Ghi chú" Width="2*" MinWidth="160">
+                <DataGridTemplateColumn Header="Ghi chú" Width="2*" MinWidth="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Margin="2,0" VerticalAlignment="Center"
                                      Text="{Binding GhiChu, UpdateSourceTrigger=LostFocus}"
                                      IsReadOnly="{Binding IsLocked}"
-                                     ToolTip="{Binding Description}" />
+                                     ToolTip="{Binding OriginalSummary}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Luật khớp" Width="*" MinWidth="110">
+                <DataGridTemplateColumn Header="Người nhận / gửi" Width="1.4*" MinWidth="130"
+                                        SortMemberPath="Model.CounterpartName">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Style="{StaticResource CellText}" Text="{Binding MatchedRule}"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Style="{StaticResource CellText}" Text="{Binding CounterpartText}"
+                                       ToolTip="{Binding CounterpartTooltip}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Trạng thái" Width="1.3*" MinWidth="120" SortMemberPath="Status">
+                <DataGridTemplateColumn Header="Trạng thái" Width="*" MinWidth="90" SortMemberPath="Status">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel VerticalAlignment="Center" Margin="6,0">
@@ -224,6 +251,33 @@
                                            ToolTip="{Binding ErrorText}" FontSize="11"
                                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                            Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Text="⚠ Mã GD trùng" FontSize="11" ToolTip="{Binding WarningText}"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           Visibility="{Binding HasWarnings, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="" Width="76">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button Appearance="Transparent" Padding="6" Icon="{ui:SymbolIcon ArrowUndo24}"
+                                           ToolTip="Hoàn tác chỉnh sửa của dòng này"
+                                           Visibility="{Binding IsEdited, Converter={StaticResource BoolToVisibility}}"
+                                           Command="{Binding DataContext.ResetRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}" />
+                                <ui:Button Appearance="Transparent" Padding="6" Icon="{ui:SymbolIcon Delete24}"
+                                           ToolTip="Xóa dòng này khỏi danh sách nhập (khôi phục được ở bộ lọc &quot;Đã xóa&quot;)"
+                                           Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}"
+                                           Command="{Binding DataContext.DeleteRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}" />
+                                <ui:Button Appearance="Transparent" Padding="6" Icon="{ui:SymbolIcon ArrowReset24}"
+                                           ToolTip="Khôi phục dòng đã xóa"
+                                           Visibility="{Binding IsDeleted, Converter={StaticResource BoolToVisibility}}"
+                                           Command="{Binding DataContext.RestoreRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -251,13 +305,12 @@
                 <TextBlock Margin="0,4,0,0" Style="{StaticResource SecondaryText}" Text="{Binding SummaryText}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <!-- Bật lên khi có phần Automation (cần selector của Money Lover). -->
-                <ui:Button Content="Chạy thử" Icon="{ui:SymbolIcon Beaker24}" Margin="0,0,8,0" IsEnabled="False"
-                           ToolTipService.ShowOnDisabled="True"
-                           ToolTip="Chưa có: cần soi selector của Money Lover (SPEC mục 12)." />
-                <ui:Button Appearance="Primary" Content="Bắt đầu nhập" Icon="{ui:SymbolIcon Play24}" IsEnabled="False"
-                           ToolTipService.ShowOnDisabled="True"
-                           ToolTip="Chưa có: cần soi selector của Money Lover (SPEC mục 12)." />
+                <ui:Button Content="Chạy thử" Icon="{ui:SymbolIcon Beaker24}" Margin="0,0,8,0"
+                           Command="{Binding DryRunCommand}"
+                           ToolTip="Đi hết các bước với giao dịch đầu tiên nhưng KHÔNG bấm Lưu — để kiểm tra an toàn." />
+                <ui:Button Appearance="Primary" Content="Bắt đầu nhập" Icon="{ui:SymbolIcon Play24}"
+                           Command="{Binding StartImportCommand}"
+                           ToolTip="Nhập các giao dịch đang chọn vào Money Lover trên điện thoại." />
             </StackPanel>
         </Grid>
     </Grid>

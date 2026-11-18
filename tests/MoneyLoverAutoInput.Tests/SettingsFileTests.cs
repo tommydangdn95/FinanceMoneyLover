@@ -65,7 +65,7 @@ public sealed class SettingsFileTests : IDisposable
         Assert.Null(back.CategoryRules[2].Type);
 
         // Mục màn Thiết lập không đụng tới vẫn còn nguyên.
-        Assert.Equal("Save", back.Selectors["SaveButton"].Value);
+        Assert.Equal("com.bookmark.money:id/btn_save", back.Selectors["SaveButton"].Value);
         Assert.Equal("com.bookmark.money", back.Appium.AppPackage);
         Assert.False(File.Exists(ConfigPath + ".tmp"));
     }

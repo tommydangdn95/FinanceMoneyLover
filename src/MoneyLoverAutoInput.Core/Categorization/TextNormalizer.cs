@@ -6,6 +6,17 @@ namespace MoneyLoverAutoInput.Core.Categorization;
 /// <summary>Bỏ dấu tiếng Việt, chữ thường, gộp khoảng trắng — dùng cho so khớp luật và tên cột.</summary>
 public static class TextNormalizer
 {
+    /// <summary>
+    /// Tìm kiếm kiểu "chứa", không phân biệt dấu/hoa thường. Dùng cho ô chọn nhóm/ví:
+    /// "petrol" khớp "Transportation &gt; Petrol", "cafe" khớp "Café". Query rỗng khớp mọi thứ.
+    /// </summary>
+    public static bool ContainsNormalized(string? text, string? query)
+    {
+        var q = Normalize(query);
+        if (q.Length == 0) return true;
+        return Normalize(text).Contains(q, StringComparison.Ordinal);
+    }
+
     public static string Normalize(string? input)
     {
         if (string.IsNullOrEmpty(input)) return "";

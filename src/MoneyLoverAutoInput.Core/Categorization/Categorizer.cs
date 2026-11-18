@@ -104,8 +104,12 @@ public sealed class Categorizer
         var tx = new TransactionRow
         {
             Id = row.TxnCode.Trim(),
+            TxnCode = row.TxnCode.Trim(),
             ExcelRow = row.ExcelRow,
             SortKey = sortKey,
+            OriginalNgay = date,
+            OriginalLoai = type,
+            OriginalSoTien = amount,
             Ngay = date,
             Loai = type,
             SoTien = amount,
@@ -113,6 +117,8 @@ public sealed class Categorizer
             Vi = ResolveWallet(info),
             GhiChu = BuildNote(row),
             Description = row.Description,
+            CounterpartName = row.CounterpartName.Trim(),
+            CounterpartAccount = row.CounterpartAccount.Trim(),
             MatchedRule = matched?.Rule.Describe() ?? "",
             Action = matched?.Rule.Action ?? RuleAction.Import,
         };

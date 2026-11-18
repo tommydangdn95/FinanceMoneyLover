@@ -39,7 +39,7 @@
 | Host / DI / config | `Microsoft.Extensions.Hosting` (DI, `IOptions`, config JSON) |
 | Log | `Serilog` (+ `Sinks.File`, và sink riêng để đẩy log lên UI) |
 | Excel | `ClosedXML` |
-| Tự động hóa | `Appium.WebDriver` 5.x, `Selenium.Support`; Appium 2.x + driver `uiautomator2` |
+| Tự động hóa | `Appium.WebDriver` 5.x, `Selenium.Support`; Appium 2.x trở lên (máy dev: 4.0.0) + driver `uiautomator2` (9.1.0) |
 | Test | xUnit (Core: reader, categorizer, state; ViewModel nếu cần) |
 | Đóng gói | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true`. Sau v1: **Velopack** (installer + tự cập nhật) |
 | IDE | Visual Studio 2022 (workload ".NET desktop development"), hoặc VS Code + C# Dev Kit |
@@ -50,9 +50,9 @@ App **không** đóng gói sẵn các thành phần này. Màn hình Kiểm tra 
 
 | Thành phần | Ghi chú |
 |---|---|
-| Node.js LTS + Appium 2 | `npm i -g appium` rồi `appium driver install uiautomator2` |
+| Node.js LTS + Appium (2.x trở lên) | `npm i -g appium` rồi `appium driver install uiautomator2` |
 | Android Platform-Tools (`adb`) | Lấy theo đường dẫn trong config, rồi `ANDROID_HOME\platform-tools`, rồi `PATH` |
-| JDK 17 | `JAVA_HOME` |
+| JDK 17 trở lên | `JAVA_HOME` |
 | Biến môi trường | `ANDROID_HOME`, `JAVA_HOME`. Khi tự khởi động Appium, app truyền các biến này vào process con |
 
 **Không cần** project Android hoặc Android Studio. Lần chạy đầu, Appium tự cài app hỗ trợ (Appium Settings, UiAutomator2 Server) lên điện thoại.
@@ -233,7 +233,14 @@ Thứ tự nhập: **tăng dần theo `Ngày thực hiện`** (cũ trước, m�
 
 ### 6.4 Validation
 
-Chạy ngay sau khi đọc file, trước khi đụng tới điện thoại. Lỗi gồm: thiếu cột bắt buộc (lỗi cả file), `Mã giao dịch` trống hoặc trùng trong file, ngày không parse được, cả Ghi nợ lẫn Ghi có đều trống/0 hoặc đều > 0, số tiền không parse được, không xác định được nhóm (không khớp luật và không có nhóm mặc định).
+Chạy ngay sau khi đọc file, trước khi đụng tới điện thoại.
+
+**`Mã giao dịch` trùng trong file chỉ là CẢNH BÁO**, không chặn nhập:
+- Dòng vẫn được chọn sẵn và nhập bình thường. Cột Trạng thái hiện "⚠ Mã GD trùng", banner phía trên báo số dòng, và bộ lọc "Có lỗi / cần xem" bắt được các dòng này.
+- Để `state.json` và `drafts.json` không lẫn giữa các dòng, mỗi lần xuất hiện sau lần đầu (theo thứ tự dòng trong file) nhận **khóa riêng** `MÃ#2`, `MÃ#3`... (`TransactionRow.Id`). Mã gốc nằm ở `TransactionRow.TxnCode`.
+- **Rủi ro:** nếu đó thật là cùng một giao dịch bị lặp trong sao kê thì sẽ nhập 2 lần. Người dùng tự bỏ chọn hoặc xóa dòng.
+
+Lỗi (chặn nhập) gồm: thiếu cột bắt buộc (lỗi cả file), `Mã giao dịch` trống, ngày không parse được, cả Ghi nợ lẫn Ghi có đều trống/0 hoặc đều > 0, số tiền không parse được, không xác định được nhóm (không khớp luật và không có nhóm mặc định).
 
 Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dòng Excel và lý do, và **không được chọn để nhập**. Nút "Bắt đầu nhập" chỉ tính các dòng hợp lệ. Lỗi "Chưa phân loại" sẽ hết khi người dùng chọn nhóm cho dòng đó.
 
@@ -348,30 +355,38 @@ Dòng lỗi hiển thị màu đỏ trên màn hình Xem trước, kèm số dò
 
 ### 8.2 Nhập một giao dịch
 
-Luồng dưới đây dựa trên ảnh chụp màn "Add transaction" của Money Lover (giao diện tiếng Anh). Màn này gồm:
-- **Tab loại** ở đầu màn: Expense | Income | Debt/Loan.
-- **Dòng ví**, hiện tên ví đang chọn.
-- **Ô số tiền**, kèm **bàn phím số riêng của app** (0–9, `000`, `.`, `C`, ⌫, + − × ÷, nút `>` xanh dương) và hàng gợi ý số tiền nhanh.
-- **"Select category"**, **"Write note"**, nút **"Save"**.
+Luồng dưới đây dựa trên **uiautomator dump thật** (Money Lover 8.93.0, giao diện tiếng Anh, Samsung Android 10, màn 1080×2094). Selector ở `appsettings.default.json` (mục 12).
 
-Màn này **không thấy ô ngày**; cần dump UI để biết ô ngày nằm ở đâu.
+| Activity | Vai trò |
+|---|---|
+| `com.zoostudio.moneylover.main.MainActivity` | Màn chính. Có nút "+" `btAddTransaction` |
+| `...ui.editTransaction.ActivityEditTransaction` | Add transaction |
+| `...ui.categoryPicker.CategoryPickerActivity` | Chọn nhóm |
+| `...ui.switcherWallet.ActivityWalletSwitcher` | Chọn ví |
+| `...hashtagTransaction.activities.ActivityAddNote` | Ghi chú |
 
-1. Đảm bảo đang ở màn hình chính: nếu không thì `Back` tối đa 3 lần rồi `ActivateApp`.
-2. Bấm `AddButton` (nút "+" giữa thanh điều hướng dưới).
-3. **Loại:** bấm `TypeTabExpense` hoặc `TypeTabIncome` theo `Loai`. Bước này phải làm **trước** khi chọn nhóm, vì danh sách nhóm phụ thuộc vào loại.
-4. **Ví:** đọc text của `WalletField`. Chỉ khi nó khác `Vi` thì bấm vào rồi chọn `WalletItem`. Phải khớp **chính xác** tên ví, vì app có hai ví tên gần giống nhau ("TP Bank" và "TPBank").
-5. **Số tiền:** bấm `KeypadClear`, rồi bấm lần lượt các chữ số (`KeypadDigit`). Gặp cụm "000" thì dùng `KeypadTripleZero` cho nhanh. Bấm `KeypadNext` để xác nhận, sau đó đọc lại `AmountField`, bỏ dấu phân cách và phần ".00", rồi so khớp với số tiền cần nhập. Chỉ khi bàn phím không xuất hiện thì mới thử `SendKeys`.
-6. **Nhóm:** bấm `CategoryField`, cuộn tới `CategoryItem` (`UiScrollable.scrollIntoView`, khớp chính xác tên) rồi bấm.
-7. **Ngày:** chỉ làm khi ngày ≠ hôm nay (theo giờ máy PC). Bấm `DateField` rồi điều hướng DatePicker (xem 8.3).
-8. **Ghi chú:** bấm `NoteField`, `SendKeys` nội dung, rồi ẩn bàn phím.
-9. Bấm `SaveButton` và chờ quay về màn trước (điều kiện: `AddButton` hiển thị lại).
+1. **Về màn chính:** nếu `AddButton` không hiện thì bấm `Back`, tối đa 3 lần, rồi `ActivateApp`.
+2. Bấm `AddButton`.
+3. **Loại:** bấm `TypeTabExpense` / `TypeTabIncome`. Phải làm **trước** khi chọn nhóm, vì danh sách nhóm phụ thuộc loại.
+4. **Ví:** đọc `WalletText`. Chỉ khi khác `Vi` thì bấm `WalletField`, rồi bấm `WalletItem` (tên khớp **chính xác**; có "TP Bank" và "TPBank"). **Không** bấm nút menu ⋮ (`@menu`) trên dòng ví.
+5. **Số tiền:** màn mở sẵn **bàn phím số của app** với id cố định:
+   - Chữ số 1–9 là `KeypadDigit` (`button{d}`). Số **0 là `KeypadZero` (`button14`)**, khác quy luật. `000` là `button21`.
+   - Bấm `KeypadClear` trước, rồi gõ từng chữ số (gặp cụm "000" thì dùng `KeypadTripleZero`), rồi bấm `KeypadNext` (`>`) để đóng bàn phím.
+   - Đọc lại `AmountField`, bỏ mọi ký tự không phải số, rồi so với số tiền cần nhập. Lệch thì làm lại bước này.
+6. **Nhóm:** bấm `CategoryField`, mở `CategoryPickerActivity`.
+   - Bấm tab `CategoryTabExpense` / `CategoryTabIncome` cho chắc.
+   - Danh sách là `CategoryList`. **Nhóm cha có hơn 2 nhóm con bị thu gọn sau dòng "SHOW MORE…"** (`CategoryShowMore`).
+   - **Nhóm cha:** cuộn tới `CategoryItem` có tên đúng bằng tên cha rồi bấm.
+   - **Nhóm con ("Cha > Con"):** cuộn tới dòng **nhóm cha**. Trong các dòng ngay sau nó (dòng con có `@child_indicator`), tìm tên con. Không thấy thì bấm "SHOW MORE…" thuộc nhóm cha đó rồi tìm lại. Không tìm theo tên con trên toàn danh sách, vì có tên trùng giữa nhóm cha và nhóm con (VD "Fitness").
+   - Sau khi chọn, đọc `CategoryText` để xác nhận.
+7. **Ngày:** đọc `DateText` (dạng `"Sunday, 15/11/2026"`, lấy phần `dd/MM/yyyy`). Bấm `DatePrev` / `DateNext` (lùi/tiến 1 ngày) cho tới khi khớp ngày cần nhập. Mỗi bước đọc lại để xác nhận; giới hạn số lần bấm, VD 400.
+8. **Ghi chú** (nếu có): bấm `NoteField`, mở `ActivityAddNote`. Gõ vào `NoteEdit`, rồi bấm `NoteSave` để quay về.
+9. **Lưu:** `SaveButton` bị khóa (`enabled=false`) cho tới khi đủ dữ liệu, nên dùng nó để **kiểm tra lần cuối**. Bấm, rồi chờ `AddButton` hiện lại (đã về màn chính).
 
-Giữa các bước 2 đến 8 runner kiểm tra `CancellationToken`. Từ bước 9 trở đi thì không hủy nữa.
+Giữa các bước 2 đến 8 runner kiểm tra `CancellationToken`. Từ bước 9 trở đi thì không hủy nữa. Nếu bị hủy giữa chừng thì bấm Back để thoát màn Add transaction; nếu app hỏi có bỏ giao dịch đang nhập không thì chọn bỏ.
 
 ### 8.3 Chọn ngày
-- Ưu tiên: nếu DatePicker có ô nhập trực tiếp (chế độ bàn phím của Material DatePicker) thì gõ ngày.
-- Nếu không: tính số tháng chênh lệch so với tháng đang hiển thị, bấm nút tháng trước/sau đủ số lần, rồi bấm ô ngày theo text, rồi OK.
-- Selector của DatePicker được bổ sung vào config sau khi soi (`DatePrevMonth`, `DateNextMonth`, `DateDay`, `DateOk`).
+Không cần DatePicker: màn Add transaction có sẵn nút lùi/tiến 1 ngày (bước 7). DatePicker (`llSelectDate`) chỉ cần nếu sau này phải nhập giao dịch cách xa nhiều tháng.
 
 ## 9. State & chống trùng — `state.json`
 
@@ -411,9 +426,34 @@ Hiện trạng thái thiết bị (●), Appium (●), và file sao kê đang m�
 
 ### 10.3 Xem trước (trang chính)
 - **Chọn file:** vùng kéo thả file `.xlsx` cùng nút "Chọn file". Sau khi đọc, hiện số tài khoản (đã che) và khoảng thời gian của sao kê.
-- **`DataGrid` các cột:** ☐ Chọn | Ngày | Loại | Số tiền (định dạng `#,###`, Chi màu đỏ, Thu màu xanh) | Nhóm (ComboBox lấy từ `KnownCategories[Loai]`, cho gõ tự do) | Ví | Ghi chú (sửa được) | Luật khớp | Trạng thái (Mới / Đã nhập / Lỗi trước / Bỏ qua / Dữ liệu lỗi).
-- **Bộ lọc:** Tất cả / Mới / Lỗi / Chưa phân loại. Ô tìm kiếm theo mô tả.
-- **Chân trang:** số dòng được chọn, tổng Chi, tổng Thu. Các nút "Chạy thử", "Bắt đầu nhập".
+- **`DataGrid` các cột, đều sửa được trước khi chạy:**
+  - ☐ Chọn
+  - Ngày (DatePicker, `dd/MM/yyyy`)
+  - Loại (Chi/Thu)
+  - Số tiền (gõ `45000`, `45.000` hay `45,000` đều được; Chi màu đỏ, Thu màu xanh)
+  - Nhóm (chọn từ cây nhóm của loại tương ứng, cho gõ tự do)
+  - Ví (chọn từ `KnownWallets`, cho gõ tự do)
+  - Ghi chú
+  - **Người nhận / gửi** (chỉ xem): cột "Tên tài khoản" của sao kê, là người nhận nếu Chi, người gửi nếu Thu, "—" nếu ngân hàng không ghi. Tooltip hiện "Chuyển đến / Nhận từ" kèm số tài khoản đối ứng **đã che** (4 số cuối). Ô tìm kiếm cũng tìm theo tên này.
+  - Luật khớp (trong tooltip của ô Nhóm), Trạng thái (Mới / Đã nhập / Lỗi trước / Bỏ qua / Dữ liệu lỗi, kèm "· đã sửa"), nút hoàn tác dòng.
+- **Đổi Loại:** nếu nhóm hiện tại không thuộc loại mới thì nhóm tự chuyển về nhóm mặc định của loại mới.
+- **Giá trị gốc từ ngân hàng** (ngày, loại, số tiền, mô tả, mã GD, dòng Excel) được giữ trong `TransactionRow.Original*` và hiện ở tooltip của các ô để đối chiếu.
+- **Dòng bị khóa:** dòng "Đã nhập" và dòng "Dữ liệu lỗi" không sửa được.
+- **Lỗi động** (chặn nhập, hết lỗi khi sửa xong): số tiền ≤ 0, chưa có nhóm, chưa có ví.
+- **Tự lưu nháp (`drafts.json`, `Core/Drafts/DraftStore`):**
+  - Mỗi chỉnh sửa, kể cả chọn/bỏ chọn, được ghi atomic ngay theo Mã giao dịch. Đóng app hay app bị crash rồi mở lại cùng file (hoặc file sao kê khác chứa cùng giao dịch) vẫn thấy đúng như cũ.
+  - Nháp chỉ lưu các trường đã đổi. Trường nào sửa về đúng giá trị gốc thì bị xóa khỏi nháp.
+  - Khi luật thay đổi, app phân loại lại rồi áp nháp lên trên, nên **chỉnh sửa tay luôn thắng luật**.
+  - "Hoàn tác" trên dòng xóa nháp của dòng đó. "Hoàn tác tất cả" xóa nháp của mọi dòng trong file, có hỏi xác nhận.
+  - Khi một dòng nhập xong (`Done`), `ImportRunner` sẽ xóa nháp của dòng đó.
+- **Xóa dòng** (loại khỏi danh sách nhập; dữ liệu sao kê không bị đụng tới):
+  - **Một dòng:** nút 🗑 trên dòng, không hỏi xác nhận.
+  - **Nhiều dòng:** bôi đen nhiều dòng trên lưới (Ctrl/Shift + click, chế độ `SelectionMode=Extended`), rồi bấm "Xóa dòng đang chọn" hoặc phím Delete. Có hỏi xác nhận khi xóa từ 2 dòng trở lên.
+  - **Lưu trong nháp:** `RowDraft.Deleted = true`, vẫn còn khi mở lại app.
+  - **Dòng đã xóa:** bị ẩn, không được nhập, không tính vào tổng. Chỉ hiện ở bộ lọc **"Đã xóa"**, kèm nút **khôi phục**. "Hoàn tác tất cả" cũng khôi phục các dòng đã xóa.
+  - Dòng đã nhập vào Money Lover (`Done`) không xóa được.
+- **Bộ lọc:** Tất cả / Mới / Có lỗi / Chưa phân loại / Đã sửa / Đã nhập / Đã xóa. Ô tìm kiếm theo mô tả, ghi chú, nhóm, mã GD.
+- **Chân trang:** số giao dịch sẽ nhập, tổng Chi, tổng Thu (tính theo giá trị đã sửa), số dòng đã sửa. Các nút "Chạy thử", "Bắt đầu nhập".
 
 ### 10.4 Chạy
 - **Tiến trình:** thanh tiến trình (n/N), dòng đang nhập và bước hiện tại (VD "Chọn nhóm: Ăn uống").
@@ -474,15 +514,16 @@ Form cho `Tools`, `Appium`, `Timing`, `Wallets` (ánh xạ số tài khoản →
 
 Với từng màn hình bên dưới, mở trên điện thoại rồi chạy `adb shell uiautomator dump /sdcard/ui.xml; adb pull /sdcard/ui.xml` (hoặc dùng Appium Inspector). Ghi `resource-id`, `text`, `content-desc` vào `Selectors`:
 
-Đã có **ảnh chụp** (chưa có dump) của các màn: danh sách ví, danh sách giao dịch, Add transaction. Ảnh chỉ cho biết `text`, chưa có `resource-id`.
+**Đã xong (16/11/2026)**, bằng dump thật lưu ở `dumps/` (git bỏ qua vì chứa số dư/giao dịch):
+- [x] Màn chính: `btAddTransaction`
+- [x] Add transaction: tab loại, ví, ô số tiền, bàn phím số (id từng phím), nhóm, ghi chú, ngày (nút lùi/tiến 1 ngày), Save
+- [x] Add transaction sau khi bấm `>`: bàn phím đóng, ô ngày vẫn ở chỗ cũ, Save bị khóa khi chưa chọn nhóm
+- [x] Màn chọn nhóm: tab, `recycler_view`, `@name`, `@child_indicator`, "SHOW MORE…"
+- [x] Màn chọn ví: `@name` trong dòng, nút menu ⋮ phải tránh
+- [x] Màn ghi chú: `edtNote`, `actionSave`
+- [—] DatePicker: không cần (xem 8.3)
 
-- [ ] Màn hình chính: nút "+" giữa thanh dưới
-- [~] Add transaction: đã biết tab Expense/Income, "Select category", "Write note", "Save". Còn thiếu id của ô số tiền, dòng ví và nút "+"
-- [~] Bàn phím số của app: đã biết có 0–9, `000`, `C`, `>`. Còn thiếu id các phím; phím "0" trùng text với ô số tiền
-- [ ] Add transaction **sau khi bấm `>`** (xem ô ngày có hiện ra không)
-- [ ] Màn chọn nhóm (sau khi bấm "Select category"): item nhóm, vùng cuộn, có tab hay không
-- [ ] Màn chọn ví (sau khi bấm dòng ví)
-- [ ] DatePicker: tháng trước/sau, ô ngày, OK
+**Tên nhóm** cũng được đọc thẳng từ màn chọn nhóm: tự cuộn và bấm "SHOW MORE…", không chép từ ảnh. Nhờ vậy phát hiện ra các chỗ chép sai từ ảnh: "Cắt Tóc" và "Cẳt Tóc" là 2 nhóm khác nhau, "Mỳ, Bún, Cơm", và nhóm bị sót "Family > Pets".
 
 Ưu tiên `resource-id`, sau đó `content-desc`, cuối cùng mới đến `text`. Tránh xpath theo index vì dễ gãy khi app cập nhật.
 

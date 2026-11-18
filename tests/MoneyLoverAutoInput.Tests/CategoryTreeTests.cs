@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using MoneyLoverAutoInput.Core.Categorization;
 using MoneyLoverAutoInput.Core.Configuration;
 using MoneyLoverAutoInput.Core.Models;
 
@@ -73,6 +74,38 @@ public class CategoryTreeTests
         var nodes = CategoryTree.Parse("  - Café\nBooks");
 
         Assert.Equal(new[] { "Café", "Books" }, nodes.Select(n => n.Name));
+    }
+
+    [Theory]
+    [InlineData("petrol", "Transportation > Petrol")]          // tên nhóm con, không phải đầu chuỗi
+    [InlineData("PETROL", "Transportation > Petrol")]
+    [InlineData("cafe", "Food & Beverage > Café")]            // không dấu khớp có dấu
+    [InlineData("nuoc mia", "Food & Beverage > Nước Mía")]
+    [InlineData("đặt xe", "Transportation > Đặt Xe")]
+    [InlineData("transport", "Transportation > Petrol")]       // vẫn khớp theo tên nhóm cha
+    [InlineData("tp bank", "TP Bank Tín Dụng")]
+    [InlineData("", "Bất kỳ")]
+    public void Search_matches_anywhere_ignoring_accents_and_case(string query, string item) =>
+        Assert.True(TextNormalizer.ContainsNormalized(item, query));
+
+    [Theory]
+    [InlineData("petrol", "Transportation > Taxi")]
+    [InlineData("cafe", "Food & Beverage > Bánh Mì")]
+    public void Search_rejects_non_matching(string query, string item) =>
+        Assert.False(TextNormalizer.ContainsNormalized(item, query));
+
+    [Fact]
+    public void Search_over_flattened_tree_finds_child_by_its_own_name()
+    {
+        var nodes = new List<CategoryNode>
+        {
+            new() { Name = "Transportation", Children = new() { "Đặt Xe", "Petrol", "Taxi" } },
+            new() { Name = "Food & Beverage", Children = new() { "Café" } },
+        };
+
+        var hits = CategoryTree.Flatten(nodes).Where(p => TextNormalizer.ContainsNormalized(p, "petrol")).ToList();
+
+        Assert.Equal(new[] { "Transportation > Petrol" }, hits);
     }
 
     [Fact]

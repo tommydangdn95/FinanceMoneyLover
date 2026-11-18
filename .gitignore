@@ -23,6 +23,8 @@ artifacts/
 # Runtime (bình thường nằm ở %LOCALAPPDATA%\MoneyLoverAutoInput, phòng khi copy ra repo)
 state.json
 state.json.tmp
+drafts.json
+drafts.json.tmp
 logs/
 screenshots/
 appsettings.local.json

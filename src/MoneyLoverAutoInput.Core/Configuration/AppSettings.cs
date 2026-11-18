@@ -19,6 +19,9 @@ public sealed class AppSettings
     /// <summary>Số tài khoản → tên ví trong app.</summary>
     public Dictionary<string, string> Wallets { get; set; } = new();
 
+    /// <summary>Danh sách ví có trong Money Lover — để chọn ví cho từng dòng trên Xem trước.</summary>
+    public List<string> KnownWallets { get; set; } = new();
+
     /// <summary>"Chi"/"Thu" → cây nhóm có trong app (nhóm cha + nhóm con).</summary>
     public Dictionary<string, List<CategoryNode>> KnownCategories { get; set; } = new();
 

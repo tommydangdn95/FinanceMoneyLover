@@ -66,6 +66,23 @@ public sealed partial class RuleEditorViewModel : ObservableObject
     /// <summary>Thứ tự ưu tiên (1 = cao nhất), do màn Thiết lập đánh lại sau mỗi thay đổi.</summary>
     [ObservableProperty] private int _order;
 
+    // ComboBox bind SelectedItem vào đúng instance trong TypeOptions/ActionOptions
+    // (SelectedValue trong ô DataGrid không đẩy giá trị về ViewModel).
+    public ChoiceOption<RuleTypeChoice> TypeOption
+    {
+        get => TypeOptions.First(o => o.Value == Type);
+        set { if (value is not null) Type = value.Value; }
+    }
+
+    public ChoiceOption<RuleAction> ActionOption
+    {
+        get => ActionOptions.First(o => o.Value == Action);
+        set { if (value is not null) Action = value.Value; }
+    }
+
+    partial void OnTypeChanged(RuleTypeChoice value) => OnPropertyChanged(nameof(TypeOption));
+    partial void OnActionChanged(RuleAction value) => OnPropertyChanged(nameof(ActionOption));
+
     public bool IsImport => Action == RuleAction.Import;
     public bool HasRegex => !string.IsNullOrWhiteSpace(_regex);
 

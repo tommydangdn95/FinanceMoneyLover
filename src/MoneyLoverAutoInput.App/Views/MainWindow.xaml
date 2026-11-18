@@ -9,7 +9,7 @@
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel}"
                  Title="Money Lover Auto Input"
-                 Width="1280" Height="800" MinWidth="1100" MinHeight="700"
+                 Width="1440" Height="860" MinWidth="1100" MinHeight="700"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
@@ -25,6 +25,12 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:EnvironmentViewModel}">
+            <views:EnvironmentView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RunViewModel}">
+            <views:RunView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <views:PlaceholderView />
@@ -47,7 +53,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- Điều hướng -->
+            <!-- Khóa điều hướng khi đang nhập (không sửa dữ liệu đang được nhập). -->
             <ListBox Grid.Column="0" Margin="8,4,4,8"
+                     IsEnabled="{Binding Run.IsNotRunning}"
                      Background="Transparent" BorderThickness="0"
                      ItemsSource="{Binding NavItems}"
                      SelectedItem="{Binding SelectedNav}">
@@ -71,8 +79,11 @@
                 Background="{DynamicResource LayerFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="Thiết bị: chưa kiểm tra   ·   Appium: chưa kiểm tra   ·   " />
+                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                    <Run Text="Thiết bị: " /><Run Text="{Binding Environment.DeviceSummary, Mode=OneWay}" />
+                    <Run Text="   ·   Appium: " /><Run Text="{Binding Environment.AppiumSummary, Mode=OneWay}" />
+                    <Run Text="   ·   " />
+                </TextBlock>
                 <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

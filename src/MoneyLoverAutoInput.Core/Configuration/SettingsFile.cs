@@ -51,6 +51,14 @@ public static class SettingsFile
 
         if (string.IsNullOrWhiteSpace(s.Defaults.Wallet))
             v.Errors.Add("Chưa nhập tên ví mặc định.");
+        else if (s.KnownWallets.Count > 0 && !s.KnownWallets.Contains(s.Defaults.Wallet.Trim()))
+            v.Warnings.Add($"Ví mặc định '{s.Defaults.Wallet}' không có trong danh sách ví.");
+
+        foreach (var dup in s.KnownWallets.GroupBy(w => w.Trim(), StringComparer.CurrentCultureIgnoreCase)
+                     .Where(g => g.Count() > 1).Select(g => g.Key))
+        {
+            v.Warnings.Add($"Ví '{dup}' bị trùng trong danh sách ví.");
+        }
 
         var expense = s.GetKnownCategories(TransactionType.Chi);
         var income = s.GetKnownCategories(TransactionType.Thu);

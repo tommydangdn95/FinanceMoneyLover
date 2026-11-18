@@ -1,5 +1,6 @@
 using MoneyLoverAutoInput.Core.Categorization;
 using MoneyLoverAutoInput.Core.Configuration;
+using MoneyLoverAutoInput.Core.Drafts;
 using MoneyLoverAutoInput.Core.Input;
 using MoneyLoverAutoInput.Core.Models;
 
@@ -57,19 +58,14 @@ public sealed class StatementLoader
     }
 
     /// <summary>
-    /// Phân loại lại sau khi luật thay đổi, giữ nguyên Nhom/GhiChu của các dòng người dùng đã sửa tay
-    /// (SPEC 10.5).
+    /// Đọc → phân loại theo luật hiện tại → áp chỉnh sửa tay đã lưu nháp (SPEC 10.3).
+    /// Dùng cả khi mở file lẫn khi luật thay đổi: chỉnh sửa tay luôn thắng luật.
+    /// Dòng lỗi dữ liệu không áp nháp (bị khóa trên UI).
     /// </summary>
-    public static LoadedStatement Recategorize(StatementReadResult read, AppSettings settings,
-        IReadOnlyDictionary<string, (string? Nhom, string? GhiChu)> manualEdits)
+    public static LoadedStatement Process(StatementReadResult read, AppSettings settings, DraftStore? drafts)
     {
         var result = Process(read, settings);
-        foreach (var row in result.Rows)
-        {
-            if (!manualEdits.TryGetValue(row.Id, out var edit)) continue;
-            if (edit.Nhom is not null) row.Nhom = edit.Nhom;
-            if (edit.GhiChu is not null) row.GhiChu = edit.GhiChu;
-        }
+        drafts?.ApplyTo(result.Rows.Where(r => !r.HasDataErrors));
         return result;
     }
 }

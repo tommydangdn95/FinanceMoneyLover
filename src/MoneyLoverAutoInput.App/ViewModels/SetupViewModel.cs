@@ -70,6 +70,22 @@ public sealed partial class SetupViewModel : ObservableObject
 
     [ObservableProperty] private string _defaultWallet = "";
 
+    /// <summary>Danh sách ví, mỗi dòng một ví.</summary>
+    [ObservableProperty] private string _walletsText = "";
+
+    public IReadOnlyList<string> KnownWallets =>
+        WalletsText.Replace("\r", "").Split('\n')
+            .Select(w => w.Trim())
+            .Where(w => w.Length > 0)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+    partial void OnWalletsTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(KnownWallets));
+        MarkDirty();
+    }
+
     /// <summary>Mỗi dòng một nhóm.</summary>
     [ObservableProperty] private string _expenseCategoriesText = "";
     [ObservableProperty] private string _incomeCategoriesText = "";
@@ -165,6 +181,12 @@ public sealed partial class SetupViewModel : ObservableObject
     public IReadOnlyList<ChoiceOption<RuleTypeChoice>> TestTypeOptions { get; } =
         RuleEditorViewModel.TypeOptions.Where(o => o.Value != RuleTypeChoice.Both).ToList();
 
+    public ChoiceOption<RuleTypeChoice> TestTypeOption
+    {
+        get => TestTypeOptions.First(o => o.Value == TestType);
+        set { if (value is not null) TestType = value.Value; }
+    }
+
     [RelayCommand]
     private void RunTest()
     {
@@ -249,6 +271,7 @@ public sealed partial class SetupViewModel : ObservableObject
             var s = SettingsFile.Clone(source);
             IsFirstRun = !s.SetupCompleted;
             DefaultWallet = s.Defaults.Wallet;
+            WalletsText = string.Join(Environment.NewLine, s.KnownWallets);
             ExpenseCategoriesText = CategoryTree.Format(s.GetCategoryTree(TransactionType.Chi));
             IncomeCategoriesText = CategoryTree.Format(s.GetCategoryTree(TransactionType.Thu));
             DefaultExpenseCategory = s.Defaults.ExpenseCategory;
@@ -271,6 +294,7 @@ public sealed partial class SetupViewModel : ObservableObject
     {
         var s = SettingsFile.Clone(_settings.CurrentValue);
         s.Defaults.Wallet = DefaultWallet.Trim();
+        s.KnownWallets = KnownWallets.ToList();
         s.Defaults.ExpenseCategory = DefaultExpenseCategory.Trim();
         s.Defaults.IncomeCategory = DefaultIncomeCategory.Trim();
         s.KnownCategories = new Dictionary<string, List<CategoryNode>>

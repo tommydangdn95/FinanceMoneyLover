@@ -29,7 +29,7 @@ public class DefaultConfigTests
         Assert.Contains("Bills & Utilities > Water Bill", s.GetKnownCategories(TransactionType.Chi));
         Assert.Contains("Other Expense", s.GetKnownCategories(TransactionType.Chi));
         Assert.Contains("Incoming transfer", s.GetKnownCategories(TransactionType.Thu));
-        Assert.Equal("Save", s.Selectors["SaveButton"].Value);
+        Assert.Equal("com.bookmark.money:id/btn_save", s.Selectors["SaveButton"].Value);
         Assert.Equal("Expense", s.Selectors["TypeTabExpense"].Value);
         Assert.Equal("id", s.Selectors["AddButton"].By);
     }
@@ -44,6 +44,26 @@ public class DefaultConfigTests
         Assert.Equal(TransactionType.Thu, salary.Type);
         Assert.Equal(RuleAction.Import, salary.Action);
         Assert.Equal("Salary", salary.Category);
+    }
+
+    [Fact]
+    public void Default_selectors_are_complete_and_use_app_package()
+    {
+        var selectors = Bind().Selectors;
+
+        Assert.All(selectors, kv => Assert.DoesNotContain("TODO", kv.Value.Value));
+        Assert.All(selectors.Where(kv => kv.Value.By == "id"),
+            kv => Assert.True(kv.Value.Value.StartsWith("com.bookmark.money:id/") || kv.Value.Value.StartsWith("android:id/"),
+                $"Selector {kv.Key}: id phải có tiền tố package ({kv.Value.Value})"));
+        Assert.All(selectors, kv => Assert.Contains(kv.Value.By, new[] { "id", "text", "accessibilityId", "uiautomator" }));
+        foreach (var key in new[] { "AddButton", "TypeTabExpense", "TypeTabIncome", "WalletField", "WalletItem",
+                     "AmountField", "KeypadDigit", "KeypadZero", "KeypadNext", "CategoryField", "CategoryItem",
+                     "CategoryShowMore", "NoteField", "NoteEdit", "NoteSave", "DateText", "DatePrev", "SaveButton" })
+        {
+            Assert.True(selectors.ContainsKey(key), $"Thiếu selector {key}");
+        }
+        Assert.Contains("{d}", selectors["KeypadDigit"].Value);
+        Assert.Contains("{name}", selectors["CategoryItem"].Value);
     }
 
     [Fact]

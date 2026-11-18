@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vm="clr-namespace:MoneyLoverAutoInput.App.ViewModels"
+             xmlns:c="clr-namespace:MoneyLoverAutoInput.App.Controls"
              xmlns:views="clr-namespace:MoneyLoverAutoInput.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SetupViewModel}"
@@ -69,10 +70,25 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionTitle}" Text="1. Ví" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="Tên ví trong Money Lover ứng với tài khoản ngân hàng của sao kê. Mọi giao dịch trong file sẽ được nhập vào ví này." />
-                        <ui:TextBox Margin="0,10,0,0" MaxWidth="420" HorizontalAlignment="Left" MinWidth="320"
-                                    PlaceholderText="Ví dụ: Vietcombank"
-                                    Text="{Binding DefaultWallet, UpdateSourceTrigger=PropertyChanged}" />
+                                   Text="Danh sách ví: mỗi dòng một ví, đúng tên CHÍNH XÁC như trong Money Lover (chỉ ví còn dùng). Ví mặc định là ví ứng với tài khoản ngân hàng của sao kê; trên Xem trước vẫn đổi được ví cho từng giao dịch." />
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock FontWeight="SemiBold" Text="Danh sách ví" />
+                                <TextBox Margin="0,6,0,0" Height="110" AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Text="{Binding WalletsText, UpdateSourceTrigger=PropertyChanged, Delay=300}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock FontWeight="SemiBold" Text="Ví mặc định (bắt buộc)" />
+                                <c:SearchComboBox Margin="0,6,0,0" Height="34" ItemsSource="{Binding KnownWallets}"
+                                                   Value="{Binding DefaultWallet, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </ui:Card>
 
@@ -96,8 +112,8 @@
                                          VerticalScrollBarVisibility="Auto"
                                          Text="{Binding ExpenseCategoriesText, UpdateSourceTrigger=PropertyChanged, Delay=300}" />
                                 <TextBlock Margin="0,10,0,4" Text="Nhóm Chi mặc định" />
-                                <ComboBox IsEditable="True" ItemsSource="{Binding ExpenseCategories}"
-                                          Text="{Binding DefaultExpenseCategory, UpdateSourceTrigger=LostFocus}" />
+                                <c:SearchComboBox Height="34" ItemsSource="{Binding ExpenseCategories}"
+                                                   Value="{Binding DefaultExpenseCategory, Mode=TwoWay}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">
@@ -107,8 +123,8 @@
                                          VerticalScrollBarVisibility="Auto"
                                          Text="{Binding IncomeCategoriesText, UpdateSourceTrigger=PropertyChanged, Delay=300}" />
                                 <TextBlock Margin="0,10,0,4" Text="Nhóm Thu mặc định" />
-                                <ComboBox IsEditable="True" ItemsSource="{Binding IncomeCategories}"
-                                          Text="{Binding DefaultIncomeCategory, UpdateSourceTrigger=LostFocus}" />
+                                <c:SearchComboBox Height="34" ItemsSource="{Binding IncomeCategories}"
+                                                   Value="{Binding DefaultIncomeCategory, Mode=TwoWay}" />
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -139,7 +155,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="#" Width="36" Binding="{Binding Order}" />
 
-                                <DataGridTemplateColumn Header="Từ khóa (cách nhau bởi dấu phẩy)" Width="2*" MinWidth="200">
+                                <DataGridTemplateColumn Header="Từ khóa (cách nhau bởi dấu phẩy)" Width="1.3*" MinWidth="180">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Margin="2,0" VerticalAlignment="Center"
@@ -153,8 +169,8 @@
                                         <DataTemplate>
                                             <ComboBox Margin="2,0" VerticalAlignment="Center"
                                                       ItemsSource="{x:Static vm:RuleEditorViewModel.TypeOptions}"
-                                                      DisplayMemberPath="Label" SelectedValuePath="Value"
-                                                      SelectedValue="{Binding Type}" />
+                                                      DisplayMemberPath="Label"
+                                                      SelectedItem="{Binding TypeOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -164,19 +180,19 @@
                                         <DataTemplate>
                                             <ComboBox Margin="2,0" VerticalAlignment="Center"
                                                       ItemsSource="{x:Static vm:RuleEditorViewModel.ActionOptions}"
-                                                      DisplayMemberPath="Label" SelectedValuePath="Value"
-                                                      SelectedValue="{Binding Action}" />
+                                                      DisplayMemberPath="Label"
+                                                      SelectedItem="{Binding ActionOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Header="Nhóm" Width="*" MinWidth="150">
+                                <DataGridTemplateColumn Header="Nhóm" Width="1.7*" MinWidth="230">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <ComboBox Margin="2,0" VerticalAlignment="Center" IsEditable="True"
-                                                      ItemsSource="{Binding CategoryOptions}"
-                                                      Text="{Binding Category, UpdateSourceTrigger=LostFocus}"
-                                                      IsEnabled="{Binding IsImport}" />
+                                            <c:SearchComboBox Margin="2,0" VerticalAlignment="Center"
+                                                               ItemsSource="{Binding CategoryOptions}"
+                                                               Value="{Binding Category, Mode=TwoWay}"
+                                                               IsEnabled="{Binding IsImport}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -220,8 +236,8 @@
                             <ui:TextBox PlaceholderText="Ví dụ: GRAB*A-123XYZ HCM"
                                         Text="{Binding TestText, UpdateSourceTrigger=PropertyChanged, Delay=200}" />
                             <ComboBox Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding TestTypeOptions}"
-                                      DisplayMemberPath="Label" SelectedValuePath="Value"
-                                      SelectedValue="{Binding TestType}" />
+                                      DisplayMemberPath="Label"
+                                      SelectedItem="{Binding TestTypeOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                         <TextBlock Margin="0,10,0,0" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding TestResult}" />
                     </StackPanel>
